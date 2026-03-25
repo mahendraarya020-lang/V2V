@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Analysis — V2V Research</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%);
+      color: #2d3748;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .nav {
+      background: rgba(255, 255, 255, .95);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 10px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, .12);
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .nav-title {
+      font-size: 1rem;
+      color: #667eea;
+      font-weight: 800;
+    }
+
+    .btn {
+      padding: 7px 16px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: .82rem;
+      text-decoration: none;
+      display: inline-block;
+      transition: all .18s;
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, #38b2ac, #2c7a7b);
+      color: #fff;
+    }
+
+    .btn-purple {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+    }
+
+    .btn-outline {
+      background: rgba(255, 255, 255, .9);
+      color: #667eea;
+      border: 1.5px solid rgba(102, 126, 234, .3);
+    }
+
+    .btn-outline:hover {
+      background: #667eea;
+      color: #fff;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .15);
+    }
+
+    .btn-zoom {
+      background: rgba(255, 255, 255, .9);
+      border: 1px solid rgba(102, 126, 234, .2);
+      color: #667eea;
+      padding: 4px 10px;
+      font-size: .72rem;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-zoom:hover {
+      background: #667eea;
+      color: #fff;
+    }
+
+    .section {
+      background: rgba(255, 255, 255, .95);
+      padding: 18px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .08);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: .92rem;
+      font-weight: 800;
+      color: #667eea;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(102, 126, 234, .12);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    .kpi {
+      background: rgba(102, 126, 234, .06);
+      padding: 14px;
+      border-radius: 9px;
+      text-align: center;
+      border: 1px solid rgba(102, 126, 234, .1);
+    }
+
+    .kpi-label {
+      font-size: .7rem;
+      color: #718096;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 6px;
+      letter-spacing: .05em;
+    }
+
+    .kpi-value {
+      font-size: 1.4rem;
+      font-family: monospace;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .kpi-value.red {
+      color: #e53e3e;
+    }
+
+    .kpi-value.yellow {
+      color: #c05621;
+    }
+
+    .kpi-value.cyan {
+      color: #667eea;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 7px 16px;
+      background: rgba(255, 255, 255, .95);
+      border: 1.5px solid rgba(102, 126, 234, .15);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: .82rem;
+      font-weight: 600;
+      color: #718096;
+      transition: all .18s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+    }
+
+    .tab.active {
+      background: rgba(102, 126, 234, .1);
+      border-color: #667eea;
+      color: #667eea;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    @media(max-width:860px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-box {
+      background: #0d1117;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 10px;
+      padding: 14px 16px 10px;
+      position: relative;
+    }
+
+    .chart-box h3 {
+      color: #c9d1d9;
+      font-size: .84rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+      letter-spacing: .02em;
+    }
+
+    .chart-sub {
+      font-size: .68rem;
+      color: #484f58;
+      margin-top: 5px;
+      line-height: 1.4;
+    }
+
+    .chart-toolbar {
+      display: flex;
+      gap: 5px;
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      align-items: center;
+      z-index: 5;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 280px;
+    }
+
+    .chart-wrap-sm {
+      position: relative;
+      height: 210px;
+    }
+
+    .chart-wrap-lg {
+      position: relative;
+      height: 340px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 5px;
+      font-size: .73rem;
+      font-weight: 700;
+      margin-left: 8px;
+    }
+
+    .tag-stable {
+      background: rgba(76, 175, 125, .2);
+      color: #4caf7d;
+    }
+
+    .tag-marginal {
+      background: rgba(237, 137, 54, .2);
+      color: #c05621;
+    }
+
+    .tag-unstable {
+      background: rgba(245, 101, 101, .2);
+      color: #e53e3e;
+    }
+
+    .conclusion-item {
+      background: rgba(255, 255, 255, .95);
+      padding: 12px 16px;
+      border-radius: 8px;
+      border-left: 3px solid #667eea;
+      margin-bottom: 8px;
+      line-height: 1.6;
+      font-size: .88rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .05);
+    }
+
+    .conclusion-item.warn {
+      border-left-color: #ed8936;
+    }
+
+    .conclusion-item.danger {
+      border-left-color: #e53e3e;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: .76rem;
+      font-weight: 700;
+    }
+
+    .aoi-dist-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .aoi-stat {
+      background: rgba(102, 126, 234, .06);
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .aoi-stat-label {
+      font-size: .7rem;
+      color: #718096;
+      margin-bottom: 3px;
+    }
+
+    .aoi-stat-val {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #764ba2;
+      font-family: monospace;
+    }
+
+    .fft-note {
+      background: rgba(102, 126, 234, .06);
+      border: 1px solid rgba(102, 126, 234, .15);
+      padding: 8px 12px;
+      border-radius: 7px;
+      font-size: .76rem;
+      color: #667eea;
+      margin-top: 7px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px;
+      font-size: 1.05rem;
+      color: #fff;
+    }
+
+    .hint {
+      font-size: .66rem;
+      color: #484f58;
+      margin-top: 4px;
+      font-style: italic;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="nav">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span class="nav-title">📊 Experiment Analysis</span>
+      <a href="/dashboard" class="btn btn-green">🏠 Dashboard</a>
+      <a href="/compare" class="btn btn-purple">⚖️ Compare</a>
+      <a href="/history" class="btn btn-outline">📋 History</a>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" id="exportBtn">⬇ CSV</button>
+      <button class="btn btn-purple" id="newExpBtn">＋ New Experiment</button>
+    </div>
+  </div>
+
+  <div id="loadingDiv" class="loading">⏳ Loading experiment data…</div>
+  <div id="contentDiv" style="display:none">
+
+    <div class="section">
+      <div class="section-title">🏆 Experiment Summary</div>
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="kpi-label">Experiment ID</div>
+          <div class="kpi-value cyan" id="expId" style="font-size:.8rem">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Duration</div>
+          <div class="kpi-value" id="duration">0s</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Vehicles</div>
+          <div class="kpi-value" id="totalVehicles">0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Network</div>
+          <div class="kpi-value cyan" id="networkMode">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Collision</div>
+          <div class="kpi-value" id="collisionStatus">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Stability</div>
+          <div class="kpi-value" id="finalStability">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Mode Switches</div>
+          <div class="kpi-value yellow" id="modeSwitches">0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Avg Spacing Err</div>
+          <div class="kpi-value" id="avgSpacingErr">0 m</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Peak AoI</div>
+          <div class="kpi-value yellow" id="peakAoi">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">PDR</div>
+          <div class="kpi-value" id="pdrVal">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab active" onclick="showTab('tab-dynamics',this)">🚗 Vehicle Dynamics</div>
+      <div class="tab" onclick="showTab('tab-string',this)">📈 String Stability</div>
+      <div class="tab" onclick="showTab('tab-network',this)">📡 Network</div>
+      <div class="tab" onclick="showTab('tab-aoi',this)">⏱ AoI</div>
+      <div class="tab" onclick="showTab('tab-fsm',this)">🔀 FSM / Safety</div>
+      <div class="tab" onclick="showTab('tab-conclusions',this)">🧠 Conclusions</div>
+    </div>
+
+    <!-- DYNAMICS -->
+    <div class="tab-panel active" id="tab-dynamics">
+      <div class="charts-grid">
+        <div class="chart-box">
+          <h3>Velocity vs Time</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('velocityChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap"><canvas id="velocityChart"></canvas></div>
+          <div class="hint">🖱 Scroll to zoom · Drag to pan · Double-click to reset</div>
+        </div>
+        <div class="chart-box">
+          <h3>Spacing Error vs Time</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('spacingChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap"><canvas id="spacingChart"></canvas></div>
+          <div class="chart-sub">Target: &lt;0.5m excellent · &lt;2m acceptable (GCDC 2011)</div>
+        </div>
+        <div class="chart-box">
+          <h3>Acceleration vs Time — V1: desired vs actual</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('accelChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap"><canvas id="accelChart"></canvas></div>
+          <div class="chart-sub">Dashed = a_desired · Solid = a_actual (τ_act actuation lag)</div>
+        </div>
+        <div class="chart-box">
+          <h3>Inter-Vehicle Gap vs Time</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('gapChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap"><canvas id="gapChart"></canvas></div>
+          <div class="chart-sub">Gap = predecessor pos − follower pos − vehicle length (5m)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRING STABILITY -->
+    <div class="tab-panel" id="tab-string">
+      <div class="charts-grid">
+        <div class="chart-box">
+          <h3>String Stability Index vs Time <span class="tag tag-stable" id="ssTag">COMPUTING…</span></h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('stabilityChart')">⟳ Reset
+              Zoom</button></div>
+          <div class="chart-wrap"><canvas id="stabilityChart"></canvas></div>
+          <div class="chart-sub">SI &gt; 0.8 STABLE · 0.5–0.8 MARGINAL · &lt;0.5 UNSTABLE (Swaroop &amp; Hedrick 1996)
+          </div>
+        </div>
+        <div class="chart-box">
+          <h3>Amplitude Ratio AR_i = |Δx_i| / |Δx_{i−1}|</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('arChart')">⟳ Reset Zoom</button></div>
+          <div class="chart-wrap"><canvas id="arChart"></canvas></div>
+          <div class="chart-sub">AR &lt; 1 for all followers = string stable (Ploeg 2011)</div>
+        </div>
+        <div class="chart-box">
+          <h3>FFT String Stability |AR(f)|</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('fftChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap"><canvas id="fftChart"></canvas></div>
+          <div class="fft-note">🔬 String stable ⟺ |AR(f)| ≤ 1 ∀f ≥ 0 (Swaroop &amp; Hedrick 1996). G-01 FFT validation.
+          </div>
+        </div>
+        <div class="chart-box">
+          <h3>RMS Spacing Error per Vehicle</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('waterfallChart')">⟳ Reset
+              Zoom</button></div>
+          <div class="chart-wrap-sm"><canvas id="waterfallChart"></canvas></div>
+          <div class="chart-sub">Rising RMS across vehicles → string instability indicator</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NETWORK -->
+    <div class="tab-panel" id="tab-network">
+      <div class="charts-grid">
+        <div class="chart-box">
+          <h3>E2E Latency per V2V Link (G-10)</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('latencyChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap"><canvas id="latencyChart"></canvas></div>
+          <div class="chart-sub">URLLC target &lt;20ms. Network + ECDSA security delay (3GPP TR 38.885).</div>
+        </div>
+        <div class="chart-box">
+          <h3>ECDSA Security Delay Distribution N(μ, σ=0.5ms) — G-03</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('secDelayChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap"><canvas id="secDelayChart"></canvas></div>
+          <div class="chart-sub">Stochastic ECDSA overhead (Brecht 2018). Gaussian vs constant assumption.</div>
+        </div>
+        <div class="chart-box">
+          <h3>Packet Delivery Ratio (PDR) vs Time</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('pdrChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap"><canvas id="pdrChart"></canvas></div>
+          <div class="chart-sub">3GPP TR 36.885: PDR &gt;95% required for V2X safety applications.</div>
+        </div>
+        <div class="chart-box">
+          <h3>Delay Breakdown: Network vs Security</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('delayBreakChart')">⟳ Reset
+              Zoom</button></div>
+          <div class="chart-wrap"><canvas id="delayBreakChart"></canvas></div>
+          <div class="chart-sub">G-02: Total = propagation + processing + queuing + ECDSA security.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AOI -->
+    <div class="tab-panel" id="tab-aoi">
+      <div class="aoi-dist-grid" id="aoiStats"></div>
+      <div class="charts-grid">
+        <div class="chart-box">
+          <h3>Age of Information per Vehicle vs Time</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('aoiChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap-lg"><canvas id="aoiChart"></canvas></div>
+          <div class="chart-sub">FSM thresholds: 100ms CACC→DEG · 500ms DEG→ACC</div>
+        </div>
+        <div class="chart-box">
+          <h3>AoI Histogram — Empirical vs M/D/1 Theoretical (G-05)</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('aoiHistChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap-lg"><canvas id="aoiHistChart"></canvas></div>
+          <div class="chart-sub">M/D/1 (Kaul 2012): Peak AoI = 1/(2λ) + S + ρ/(λ(1−ρ)). λ=10Hz, S=100ms.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FSM -->
+    <div class="tab-panel" id="tab-fsm">
+      <div class="charts-grid">
+        <div class="chart-box">
+          <h3>FSM State per Vehicle vs Time</h3>
+          <div class="chart-toolbar"><button class="btn-zoom" onclick="resetZoom('fsmChart')">⟳ Reset Zoom</button>
+          </div>
+          <div class="chart-wrap"><canvas id="fsmChart"></canvas></div>
+          <div class="chart-sub">4=CACC · 3=DEGRADED · 2=ACC · 1=EMERGENCY — AoI-driven transitions</div>
+        </div>
+        <div class="chart-box">
+          <h3>Mode Switch Timeline</h3>
+          <div id="modeSwitchLog" style="max-height:300px;overflow-y:auto;padding:2px 4px;margin-top:4px"></div>
+        </div>
+      </div>
+      <div id="collisionReport" style="display:none;margin-top:14px">
+        <div class="section-title" style="color:#f56565">🚨 Collision Report</div>
+        <div id="collisionDetails"></div>
+      </div>
+    </div>
+
+    <!-- CONCLUSIONS -->
+    <div class="tab-panel" id="tab-conclusions">
+      <div class="section">
+        <div class="section-title">🧠 Academic Conclusions &amp; Recommendations</div>
+        <div id="conclusionsList"></div>
+        <div class="badge-row" id="configBadges"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ─── MATLAB STYLE DEFAULTS ────────────────────────────────
+    Chart.defaults.color = '#8b949e';
+    Chart.defaults.font.family = "'Courier New', Courier, monospace";
+    Chart.defaults.font.size = 11;
+
+    const MATLAB_COLORS = [
+      '#0099cc', '#e6a817', '#cc3333', '#4caf7d', '#9966cc',
+      '#ff8800', '#00b8c0', '#dd5599', '#99aacc', '#ffcc00'
+    ];
+
+    const chartReg = {};
+
+    function showTab(id, el) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      el.classList.add('active');
+    }
+
+    function resetZoom(id) {
+      if (chartReg[id]) chartReg[id].resetZoom();
+    }
+
+    // ─── AXIS STYLE ───────────────────────────────────────────
+    function axisStyle(title) {
+      return {
+        display: true,
+        title: { display: !!title, text: title, color: '#8b949e', font: { size: 11, weight: 'bold', family: "'Segoe UI',sans-serif" } },
+        grid: { color: 'rgba(255,255,255,0.07)', lineWidth: 0.7 },
+        ticks: { color: '#8b949e', maxTicksLimit: 10, font: { size: 10, family: "'Courier New',monospace" } },
+        border: { color: 'rgba(255,255,255,0.22)' }
+      };
+    }
+
+    function zoomOpts() {
+      return {
+        zoom: { wheel: { enabled: true, speed: 0.07 }, pinch: { enabled: true }, mode: 'xy', onZoomComplete: null },
+        pan: { enabled: true, mode: 'xy' }
+      };
+    }
+
+    function legendOpts() {
+      return {
+        position: 'top',
+        labels: {
+          color: '#c9d1d9', font: { size: 10, family: "'Segoe UI',sans-serif" },
+          boxWidth: 28, boxHeight: 2, padding: 10, usePointStyle: true, pointStyle: 'line'
+        }
+      };
+    }
+
+    function tooltipOpts() {
+      return {
+        backgroundColor: 'rgba(13,17,23,0.93)',
+        titleColor: '#e6edf3', bodyColor: '#8b949e',
+        borderColor: 'rgba(255,255,255,.14)', borderWidth: 1, padding: 8,
+        callbacks: { label: ctx => ` ${ctx.dataset.label}: ${typeof ctx.raw === 'number' ? ctx.raw.toFixed(4) : ctx.raw}` }
+      };
+    }
+
+    function mkLine(id, datasets, labels, yLabel = '', xLabel = 'Time (s)', yMin = undefined, yMax = undefined, extraAnnotations = {}) {
+      const ctx = document.getElementById(id); if (!ctx) return null;
+      if (chartReg[id]) chartReg[id].destroy();
+      const scaleY = { ...axisStyle(yLabel), ...(yMin !== undefined ? { min: yMin } : {}), ...(yMax !== undefined ? { max: yMax } : {}) };
+      const ch = new Chart(ctx, {
+        type: 'line', data: { labels, datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: legendOpts(),
+            tooltip: tooltipOpts(),
+            zoom: zoomOpts(),
+            annotation: { annotations: extraAnnotations }
+          },
+          scales: { x: axisStyle(xLabel), y: scaleY },
+          elements: { point: { radius: 0, hoverRadius: 4 }, line: { tension: 0.2, borderWidth: 2 } }
+        }
+      });
+      chartReg[id] = ch; return ch;
+    }
+
+    function mkBar(id, datasets, labels, yLabel = '', xLabel = '', yMin = 0) {
+      const ctx = document.getElementById(id); if (!ctx) return null;
+      if (chartReg[id]) chartReg[id].destroy();
+      const ch = new Chart(ctx, {
+        type: 'bar', data: { labels, datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
+          plugins: { legend: legendOpts(), zoom: zoomOpts(), tooltip: tooltipOpts() },
+          scales: { x: axisStyle(xLabel), y: { ...axisStyle(yLabel), min: yMin } }
+        }
+      });
+      chartReg[id] = ch; return ch;
+    }
+
+    // ─── DATA HELPERS ─────────────────────────────────────────
+    function decimateLog(log, maxPts = 600) {
+      if (log.length <= maxPts) return log;
+      const step = Math.ceil(log.length / maxPts);
+      const out = [];
+      for (let i = 0; i < log.length; i += step) out.push(log[i]);
+      if (out[out.length - 1] !== log[log.length - 1]) out.push(log[log.length - 1]);
+      return out;
+    }
+
+    // ─── FFT ─────────────────────────────────────────────────
+    function fftMag(signal) {
+      const N = Math.pow(2, Math.floor(Math.log2(signal.length)));
+      const x = signal.slice(0, N);
+      function brev(n, b) { let r = 0; for (let i = 0; i < b; i++) { r = (r << 1) | (n & 1); n >>= 1; } return r; }
+      const bits = Math.log2(N);
+      const re = new Float64Array(N), im = new Float64Array(N);
+      for (let i = 0; i < N; i++) re[brev(i, bits)] = x[i];
+      for (let len = 2; len <= N; len <<= 1) {
+        const ang = -2 * Math.PI / len, wRe = Math.cos(ang), wIm = Math.sin(ang);
+        for (let i = 0; i < N; i += len) {
+          let cRe = 1, cIm = 0;
+          for (let j = 0; j < len / 2; j++) {
+            const uRe = re[i + j], uIm = im[i + j];
+            const vRe = re[i + j + len / 2] * cRe - im[i + j + len / 2] * cIm;
+            const vIm = re[i + j + len / 2] * cIm + im[i + j + len / 2] * cRe;
+            re[i + j] = uRe + vRe; im[i + j] = uIm + vIm;
+            re[i + j + len / 2] = uRe - vRe; im[i + j + len / 2] = uIm - vIm;
+            const nr = cRe * wRe - cIm * wIm; cIm = cRe * wIm + cIm * wRe; cRe = nr;
+          }
+        }
+      }
+      const mag = new Float64Array(N / 2);
+      for (let i = 0; i < N / 2; i++) mag[i] = Math.sqrt(re[i] * re[i] + im[i] * im[i]);
+      return mag;
+    }
+
+    function computeFFT(dataLog, fids, dt = 0.01) {
+      if (fids.length < 2) return null;
+      const errs = {};
+      fids.forEach(id => { errs[id] = dataLog.map(d => d.vehicles.find(v => v.id === id)?.spacing_error || 0); });
+      const N = Math.pow(2, Math.floor(Math.log2(dataLog.length)));
+      const freqStep = 1 / (N * dt);
+      const freqs = Array.from({ length: N / 2 }, (_, i) => i * freqStep);
+      const curves = {};
+      for (let i = 1; i < fids.length; i++) {
+        const id = fids[i], idP = fids[i - 1];
+        const mi = fftMag(errs[id]), mp = fftMag(errs[idP]);
+        curves[id] = Array.from(mi).map((m, k) => mp[k] > 0.001 ? m / mp[k] : 0);
+      }
+      return { freqs, curves };
+    }
+
+    // ─── MAIN ────────────────────────────────────────────────
+    let expData = null;
+    window.addEventListener('load', async () => {
+      try {
+        const r = await fetch('/api/get_last_experiment');
+        if (r.ok) {
+          expData = await r.json();
+          document.getElementById('loadingDiv').style.display = 'none';
+          document.getElementById('contentDiv').style.display = 'block';
+          renderAll(expData);
+        } else {
+          document.getElementById('loadingDiv').innerHTML = '<p style="color:#f56565">No experiment data. <a href="/configure" class="btn btn-purple">Run a simulation first</a></p>';
+        }
+      } catch (e) {
+        document.getElementById('loadingDiv').innerHTML = '<p style="color:#f56565">Error: ' + e.message + '</p>';
+      }
+    });
+
+    function renderAll(data) {
+      renderKPIs(data);
+      const dec = decimateLog(data.data, 700);
+      renderDynamics(dec);
+      renderStringStability(dec, data.data);
+      renderNetwork(dec);
+      renderAoI(dec, data.aoi_distribution, data.data);
+      renderFSM(dec, data.mode_switch_log, data.collision_log);
+      renderConclusions(data);
+    }
+
+    // ── KPIs ─────────────────────────────────────────────────
+    function renderKPIs(data) {
+      document.getElementById('expId').textContent = data.experiment_id;
+      const dur = data.data.length ? data.data[data.data.length - 1].time : 0;
+      document.getElementById('duration').textContent = dur.toFixed(1) + 's';
+      document.getElementById('totalVehicles').textContent = (data.config.num_vehicles || 0) * (data.config.num_platoons || 1);
+      document.getElementById('networkMode').textContent = data.config.network_slicing || 'URLLC';
+      document.getElementById('modeSwitches').textContent = (data.mode_switch_log || []).length;
+      const colEl = document.getElementById('collisionStatus');
+      colEl.textContent = data.collision_occurred ? 'YES ⚠' : 'NO ✓';
+      colEl.className = 'kpi-value ' + (data.collision_occurred ? 'red' : '');
+      const siStr = data.data.length ? data.data[data.data.length - 1].stability_status : '?';
+      const ssEl = document.getElementById('finalStability');
+      ssEl.textContent = siStr; ssEl.className = 'kpi-value ' + (siStr === 'STABLE' ? '' : siStr === 'MARGINAL' ? 'yellow' : 'red');
+      let errs = [], aois = [];
+      data.data.forEach(d => d.vehicles.filter(v => !v.is_leader).forEach(v => {
+        if (v.spacing_error != null) errs.push(Math.abs(v.spacing_error));
+        if (v.aoi_ms != null) aois.push(v.aoi_ms);
+      }));
+      const avgErr = errs.length ? errs.reduce((a, b) => a + b, 0) / errs.length : 0;
+      document.getElementById('avgSpacingErr').textContent = avgErr.toFixed(3) + ' m';
+      const peakAoi = aois.length ? Math.max(...aois) : 0;
+      const peakEl = document.getElementById('peakAoi');
+      peakEl.textContent = peakAoi.toFixed(0) + ' ms'; peakEl.className = 'kpi-value ' + (peakAoi > 500 ? 'red' : peakAoi > 100 ? 'yellow' : '');
+      const lastNet = data.data.length ? data.data[data.data.length - 1].network : null;
+      document.getElementById('pdrVal').textContent = lastNet ? lastNet.pdr.toFixed(1) + ' %' : '—';
+    }
+
+    // ── DYNAMICS ─────────────────────────────────────────────
+    function renderDynamics(log) {
+      if (!log.length) return;
+      const times = log.map(d => d.time.toFixed(2));
+      const ids = [...new Set(log[0].vehicles.map(v => v.id))];
+      const fids = ids.filter(id => log[0].vehicles.find(v => v.id === id && !v.is_leader));
+
+      mkLine('velocityChart', ids.map((id, i) => ({
+        label: 'V' + id, borderColor: MATLAB_COLORS[i % MATLAB_COLORS.length], borderWidth: 2,
+        data: log.map(d => d.vehicles.find(v => v.id === id)?.velocity_kmh ?? null)
+      })), times, 'Velocity (km/h)', 'Time (s)');
+
+      mkLine('spacingChart', fids.map((id, i) => ({
+        label: 'V' + id, borderColor: MATLAB_COLORS[(i + 1) % MATLAB_COLORS.length], borderWidth: 2,
+        data: log.map(d => d.vehicles.find(v => v.id === id)?.spacing_error ?? null)
+      })), times, 'Spacing Error (m)', 'Time (s)', undefined, undefined, {
+        line05p: { type: 'line', yMin: .5, yMax: .5, borderColor: 'rgba(76,175,125,.5)', borderDash: [5, 4], borderWidth: 1.5 },
+        line05n: { type: 'line', yMin: -.5, yMax: -.5, borderColor: 'rgba(76,175,125,.5)', borderDash: [5, 4], borderWidth: 1.5 },
+        line2p: { type: 'line', yMin: 2, yMax: 2, borderColor: 'rgba(246,173,85,.45)', borderDash: [5, 4], borderWidth: 1.5 },
+        line2n: { type: 'line', yMin: -2, yMax: -2, borderColor: 'rgba(246,173,85,.45)', borderDash: [5, 4], borderWidth: 1.5 }
+      });
+
+      if (fids.length) {
+        const fid = fids[0];
+        mkLine('accelChart', [
+          {
+            label: 'V' + fid + ' a_desired', borderColor: '#e6a817', borderDash: [7, 4], borderWidth: 1.5,
+            data: log.map(d => d.vehicles.find(v => v.id === fid)?.a_desired ?? null)
+          },
+          {
+            label: 'V' + fid + ' a_actual', borderColor: '#0099cc', borderWidth: 2,
+            data: log.map(d => d.vehicles.find(v => v.id === fid)?.a_actual ?? null)
+          }
+        ], times, 'Acceleration (m/s²)', 'Time (s)');
+      }
+
+      mkLine('gapChart', fids.map((id, i) => ({
+        label: 'V' + id + ' gap', borderColor: MATLAB_COLORS[(i + 1) % MATLAB_COLORS.length], borderWidth: 2,
+        data: log.map(d => {
+          const v = d.vehicles.find(v => v.id === id); if (!v) return null;
+          const pl = d.vehicles.filter(vv => vv.platoon_id === v.platoon_id).sort((a, b) => b.position - a.position);
+          const idx = pl.findIndex(vv => vv.id === id);
+          if (idx <= 0) return null;
+          return Math.max(0, pl[idx - 1].position - v.position - 5);
+        })
+      })), times, 'Gap (m)', 'Time (s)', 0);
+    }
+
+    // ── STRING STABILITY ──────────────────────────────────────
+    function renderStringStability(log, fullLog) {
+      if (!log.length) return;
+      const times = log.map(d => d.time.toFixed(2));
+      const fids = [...new Set(log[0].vehicles.filter(v => !v.is_leader).map(v => v.id))];
+
+      mkLine('stabilityChart', [{
+        label: 'String Stability Index', borderColor: '#4caf7d',
+        backgroundColor: 'rgba(76,175,125,.07)', fill: true, borderWidth: 2,
+        data: log.map(d => d.stability_index ?? null)
+      }], times, 'SI [0–1]', 'Time (s)', 0, 1, {
+        s08: { type: 'line', yMin: .8, yMax: .8, borderColor: 'rgba(76,175,125,.5)', borderDash: [5, 4], borderWidth: 1.5 },
+        s05: { type: 'line', yMin: .5, yMax: .5, borderColor: 'rgba(246,173,85,.5)', borderDash: [5, 4], borderWidth: 1.5 }
+      });
+
+      mkLine('arChart', [
+        ...fids.map((id, i) => ({
+          label: 'AR V' + id, borderColor: MATLAB_COLORS[(i + 1) % MATLAB_COLORS.length], borderWidth: 2,
+          data: log.map(d => d.amplitude_ratios?.[id] ?? null)
+        })),
+        {
+          label: 'AR = 1', borderColor: 'rgba(204,51,51,.7)', borderDash: [7, 4], borderWidth: 1.5,
+          data: log.map(() => 1)
+        }
+      ], times, 'Amplitude Ratio', 'Time (s)', 0);
+
+      // FFT
+      const fft = computeFFT(fullLog, fids, 0.01);
+      if (fft && fft.freqs.length > 2) {
+        const maxHz = 2.0, fStep = fft.freqs[1] || 0.001;
+        const nBins = Math.min(Math.floor(maxHz / fStep), fft.freqs.length, 200);
+        const fl = fft.freqs.slice(0, nBins).map(f => f.toFixed(3));
+        mkLine('fftChart', [
+          ...fids.slice(1).map((id, i) => ({
+            label: '|AR(f)| V' + id, borderColor: MATLAB_COLORS[(i + 1) % MATLAB_COLORS.length], borderWidth: 2,
+            data: (fft.curves[id] || []).slice(0, nBins)
+          })),
+          { label: 'AR = 1 limit', borderColor: 'rgba(204,51,51,.7)', borderDash: [7, 4], borderWidth: 1.5, data: fl.map(() => 1) }
+        ], fl, '|AR(f)|', 'Frequency (Hz)', 0);
+        const allAR = fids.slice(1).flatMap(id => (fft.curves[id] || []).slice(0, nBins));
+        const maxAR = allAR.length ? Math.max(...allAR) : 0;
+        const tag = document.getElementById('ssTag');
+        if (maxAR < 1) { tag.textContent = '✓ FREQ-STABLE'; tag.className = 'tag tag-stable'; }
+        else if (maxAR < 1.2) { tag.textContent = '⚠ MARGINAL'; tag.className = 'tag tag-marginal'; }
+        else { tag.textContent = '✗ UNSTABLE'; tag.className = 'tag tag-unstable'; }
+      }
+
+      const rms = fids.map(id => {
+        const e = fullLog.map(d => d.vehicles.find(v => v.id === id)?.spacing_error || 0);
+        return Math.sqrt(e.reduce((a, b) => a + b * b, 0) / e.length);
+      });
+      mkBar('waterfallChart', [{
+        label: 'RMS Spacing Error (m)', data: rms, borderRadius: 4, borderWidth: 0,
+        backgroundColor: rms.map(r => r < 0.5 ? 'rgba(76,175,125,.75)' : r < 2 ? 'rgba(230,168,23,.75)' : 'rgba(204,51,51,.75)')
+      }], fids.map(id => 'V' + id), 'RMS Error (m)', 'Vehicle', 0);
+    }
+
+    // ── NETWORK ───────────────────────────────────────────────
+    function renderNetwork(log) {
+      if (!log.length) return;
+      const times = log.map(d => d.time.toFixed(2));
+      const linkIds = Object.keys(log.find(d => Object.keys(d.network.link_latency || {}).length > 0)?.network.link_latency || {});
+
+      if (linkIds.length) {
+        mkLine('latencyChart', linkIds.map((lid, i) => ({
+          label: 'V' + lid + ' link', borderColor: MATLAB_COLORS[i % MATLAB_COLORS.length], borderWidth: 1.8,
+          data: log.map(d => d.network.link_latency?.[lid] ?? null)
+        })), times, 'Latency (ms)', 'Time (s)', 0, undefined, {
+          urllc: { type: 'line', yMin: 20, yMax: 20, borderColor: 'rgba(204,51,51,.5)', borderDash: [5, 4], borderWidth: 1.5 }
+        });
+      } else {
+        mkLine('latencyChart', [{
+          label: 'Avg E2E Latency', borderColor: '#9966cc', backgroundColor: 'rgba(153,102,204,.08)',
+          fill: true, borderWidth: 2, data: log.map(d => d.network.avg_delay ?? null)
+        }], times, 'Latency (ms)', 'Time (s)', 0);
+      }
+
+      const secMean = log[log.length - 1]?.network.security_delay_ms || 3, secStd = 0.5;
+      const xs = Array.from({ length: 40 }, (_, i) => secMean - 3.5 * secStd + i * (7 * secStd / 39));
+      const ys = xs.map(x => Math.exp(-0.5 * ((x - secMean) / secStd) ** 2) / (secStd * Math.sqrt(2 * Math.PI)));
+      mkLine('secDelayChart', [{
+        label: `N(${secMean.toFixed(2)}, ${secStd}ms)`,
+        borderColor: '#9966cc', backgroundColor: 'rgba(153,102,204,.12)', fill: true,
+        borderWidth: 2, data: ys
+      }], xs.map(x => x.toFixed(2)), 'Probability Density', 'Delay (ms)', 0);
+
+      mkLine('pdrChart', [
+        {
+          label: 'PDR (%)', borderColor: '#4caf7d', backgroundColor: 'rgba(76,175,125,.08)', fill: true, borderWidth: 2,
+          data: log.map(d => d.network.pdr ?? null)
+        },
+        {
+          label: '95% Target', borderColor: 'rgba(204,51,51,.65)', borderDash: [7, 4], borderWidth: 1.5,
+          data: log.map(() => 95)
+        }
+      ], times, 'PDR (%)', 'Time (s)', 0, 105);
+
+      mkLine('delayBreakChart', [
+        {
+          label: 'Network', borderColor: '#0099cc', backgroundColor: 'rgba(0,153,204,.1)', fill: true, borderWidth: 2,
+          data: log.map(d => d.network.delay_components?.network ?? d.network.avg_delay ?? null)
+        },
+        {
+          label: 'Security (ECDSA)', borderColor: '#9966cc', backgroundColor: 'rgba(153,102,204,.1)', fill: true, borderWidth: 2,
+          data: log.map(d => d.network.delay_components?.security ?? d.network.security_delay_ms ?? 3)
+        }
+      ], times, 'Delay (ms)', 'Time (s)', 0);
+    }
+
+    // ── AOI ───────────────────────────────────────────────────
+    function renderAoI(log, aoiDist, fullLog) {
+      if (!log.length) return;
+      const times = log.map(d => d.time.toFixed(2));
+      const fids = [...new Set(log[0].vehicles.filter(v => !v.is_leader).map(v => v.id))];
+
+      mkLine('aoiChart', [
+        ...fids.map((id, i) => ({
+          label: 'V' + id + ' AoI', borderColor: MATLAB_COLORS[(i + 1) % MATLAB_COLORS.length], borderWidth: 1.8,
+          data: log.map(d => d.vehicles.find(v => v.id === id)?.aoi_ms ?? null)
+        })),
+        { label: '100ms threshold', borderColor: 'rgba(230,168,23,.7)', borderDash: [6, 4], borderWidth: 1.5, data: log.map(() => 100) },
+        { label: '500ms threshold', borderColor: 'rgba(204,51,51,.7)', borderDash: [8, 4], borderWidth: 1.5, data: log.map(() => 500) }
+      ], times, 'AoI (ms)', 'Time (s)', 0);
+
+      if (aoiDist?.mean_ms) {
+        const d = aoiDist;
+        document.getElementById('aoiStats').innerHTML =
+          `<div class="aoi-stat"><div class="aoi-stat-label">Mean AoI</div><div class="aoi-stat-val">${d.mean_ms} ms</div></div>
+       <div class="aoi-stat"><div class="aoi-stat-label">Std Dev</div><div class="aoi-stat-val">${d.std_ms} ms</div></div>
+       <div class="aoi-stat"><div class="aoi-stat-label">95th %ile</div><div class="aoi-stat-val">${d.p95_ms} ms</div></div>
+       <div class="aoi-stat"><div class="aoi-stat-label">Empirical Peak</div><div class="aoi-stat-val">${d.peak_ms} ms</div></div>
+       <div class="aoi-stat"><div class="aoi-stat-label">M/D/1 Peak</div><div class="aoi-stat-val">${d.theoretical_peak_ms} ms</div></div>
+       <div class="aoi-stat"><div class="aoi-stat-label">Samples</div><div class="aoi-stat-val">${d.n_samples}</div></div>`;
+        const allAoI = [];
+        (fullLog || log).forEach(dd => dd.vehicles.filter(v => !v.is_leader).forEach(v => { if (v.aoi_ms != null) allAoI.push(v.aoi_ms); }));
+        const mu = d.mean_ms, sig = Math.max(d.std_ms || 20, 1);
+        const binW = Math.max(5, Math.ceil((mu + 3 * sig) / 22));
+        const nBins = Math.min(25, Math.ceil((mu + 4 * sig) / binW));
+        const edges = Array.from({ length: nBins }, (_, i) => i * binW);
+        const counts = new Array(nBins).fill(0);
+        allAoI.forEach(v => { const bi = Math.floor(v / binW); if (bi < nBins) counts[bi]++; });
+        const total = allAoI.length || 1;
+        const norm = counts.map(c => c / total * 100);
+        const theory = edges.map(b => { const x = b + binW / 2; return Math.exp(-0.5 * ((x - mu) / sig) ** 2) / (sig * Math.sqrt(2 * Math.PI)) * binW * 100; });
+        const ctx = document.getElementById('aoiHistChart'); if (!ctx) return;
+        if (chartReg['aoiHistChart']) chartReg['aoiHistChart'].destroy();
+        chartReg['aoiHistChart'] = new Chart(ctx, {
+          data: {
+            labels: edges.map(e => e + '-' + (e + binW)), datasets: [
+              { type: 'bar', label: 'Empirical', data: norm, backgroundColor: 'rgba(0,153,204,.45)', borderColor: 'rgba(0,153,204,.8)', borderWidth: 1, borderRadius: 3, order: 2 },
+              { type: 'line', label: 'M/D/1 Theoretical', data: theory, borderColor: '#e6a817', backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 0, tension: 0.4, order: 1 }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+            plugins: { legend: legendOpts(), zoom: zoomOpts(), tooltip: tooltipOpts() },
+            scales: { x: { ...axisStyle('AoI (ms)') }, y: { ...axisStyle('Frequency (%)'), min: 0 } }
+          }
+        });
+      }
+    }
+
+    // ── FSM ───────────────────────────────────────────────────
+    function renderFSM(log, switchLog, colLog) {
+      if (!log.length) return;
+      const times = log.map(d => d.time.toFixed(2));
+      const fids = [...new Set(log[0].vehicles.filter(v => !v.is_leader).map(v => v.id))];
+      const stMap = { 'CACC': 4, 'DEGRADED': 3, 'ACC': 2, 'EMERGENCY': 1, 'LEADER': 5 };
+      const ctx = document.getElementById('fsmChart');
+      if (ctx) {
+        if (chartReg['fsmChart']) chartReg['fsmChart'].destroy();
+        chartReg['fsmChart'] = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: times, datasets: fids.map((id, i) => ({
+              label: 'V' + id, borderColor: MATLAB_COLORS[(i + 1) % MATLAB_COLORS.length],
+              borderWidth: 2, stepped: 'before', pointRadius: 0,
+              data: log.map(d => stMap[d.vehicles.find(v => v.id === id)?.fsm_state || 'CACC'] || 4)
+            }))
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: legendOpts(), zoom: zoomOpts(), tooltip: tooltipOpts() },
+            scales: {
+              x: axisStyle('Time (s)'),
+              y: {
+                ...axisStyle('FSM State'), min: 0, max: 5,
+                ticks: {
+                  stepSize: 1, callback: v => ({ 1: 'EMERGENCY', 2: 'ACC', 3: 'DEGRADED', 4: 'CACC', 5: 'LEADER' }[v] || ''),
+                  color: '#8b949e', font: { size: 10, family: "'Courier New',monospace" }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      const logEl = document.getElementById('modeSwitchLog');
+      if (switchLog && switchLog.length) {
+        logEl.innerHTML = switchLog.slice().reverse().map(sw => {
+          const col = sw.to === 'EMERGENCY' ? '#cc3333' : sw.to === 'ACC' ? '#e6a817' : sw.to === 'CACC' ? '#4caf7d' : '#8b949e';
+          return `<div style="padding:5px 10px;border-left:3px solid ${col};margin-bottom:4px;font-size:.77rem;background:rgba(0,0,0,.2);border-radius:0 5px 5px 0">
+        <span style="color:#484f58">t=${sw.time.toFixed(2)}s</span>&nbsp;
+        V${sw.vehicle_id || '?'}:
+        <strong style="color:#8b949e">${sw.from || '?'}</strong>
+        <span style="color:#484f58"> → </span>
+        <strong style="color:${col}">${sw.to || '?'}</strong>
+        <span style="color:#484f58;font-size:.7rem"> (${sw.reason || sw.event || ''})</span>
+      </div>`;
+        }).join('');
+      } else {
+        logEl.innerHTML = '<p style="color:#484f58;padding:10px;font-size:.82rem">No mode switches recorded.</p>';
+      }
+
+      if (colLog && colLog.length) {
+        document.getElementById('collisionReport').style.display = 'block';
+        document.getElementById('collisionDetails').innerHTML = colLog.map(c =>
+          `<div style="background:rgba(204,51,51,.06);border:1px solid rgba(204,51,51,.35);padding:12px;border-radius:8px;margin-bottom:8px;font-size:.84rem;line-height:1.6">
+        <div><strong style="color:#cc3333">t=${c.time.toFixed(2)}s</strong> — V${c.vehicles.join(' &amp; V')}</div>
+        <div style="color:#8b949e">Cause: ${c.cause}</div>
+        <div style="color:#8b949e">Gap: ${c.gap.toFixed(3)} m &nbsp;|&nbsp; Δv: ${c.relative_velocity.toFixed(3)} m/s</div>
+      </div>`
+        ).join('');
+      }
+    }
+
+    // ── CONCLUSIONS ───────────────────────────────────────────
+    function renderConclusions(data) {
+      const items = [];
+      const avgSI = data.data.length ? data.data.reduce((s, d) => s + d.stability_index, 0) / data.data.length : 0;
+      if (!data.collision_occurred) {
+        items.push({ cls: '', text: '<strong style="color:#4caf7d">✓ No Collision.</strong> System maintained safe inter-vehicle spacing throughout the experiment. Controller parameters within acceptable operating range.' });
+      } else {
+        const c = data.collision_log[0];
+        items.push({ cls: 'danger', text: `<strong style="color:#cc3333">✗ Collision at t=${c.time.toFixed(2)}s.</strong> Cause: ${c.cause}. Gap at collision: ${c.gap.toFixed(3)} m. Increase initial spacing or reduce network latency.` });
+      }
+      if (avgSI > 0.8) items.push({ cls: '', text: `<strong>String Stability VERIFIED</strong> (avg SI=${avgSI.toFixed(3)}). Spacing errors attenuate downstream. CACC demonstrates string stability per Swaroop &amp; Hedrick (1996).` });
+      else if (avgSI > 0.5) items.push({ cls: 'warn', text: `<strong>Marginal String Stability</strong> (avg SI=${avgSI.toFixed(3)}). Some error amplification detected. Recommend: ↑ α feedforward, ↓ Kp, or ↑ time headway h.` });
+      else items.push({ cls: 'danger', text: `<strong>String INSTABILITY DETECTED</strong> (avg SI=${avgSI.toFixed(3)}). Spacing errors amplify downstream. Increase h or reduce gains.` });
+      if (data.config.latency_ms > 50) items.push({ cls: 'warn', text: `<strong>High Latency (${data.config.latency_ms}ms)</strong> exceeds 50ms. URLLC target &lt;10ms. Enable URLLC slice &amp; RSU edge nodes.` });
+      if (data.config.packet_loss > 5) items.push({ cls: 'warn', text: `<strong>Packet Loss (${data.config.packet_loss}%)</strong> above 5%. 3GPP TR 36.885 requires PDR &gt;95%.` });
+      const aoi = data.aoi_distribution || {};
+      if (aoi.peak_ms) items.push({
+        cls: aoi.peak_ms > 500 ? 'danger' : aoi.peak_ms > 100 ? 'warn' : '',
+        text: `<strong>AoI Peak: ${aoi.peak_ms}ms</strong> (mean=${aoi.mean_ms}ms, p95=${aoi.p95_ms}ms). M/D/1 theory: ${aoi.theoretical_peak_ms}ms. ${Math.abs(aoi.peak_ms - aoi.theoretical_peak_ms) < 50 ? 'Good agreement with queuing theory ✓' : 'Discrepancy may indicate burst losses exceeding Poisson assumption.'}`
+      });
+      if ((data.mode_switch_log || []).length > 0) items.push({ cls: 'warn', text: `<strong>${data.mode_switch_log.length} FSM transitions.</strong> Each CACC→ACC switch increases spacing variability. Improve network reliability to reduce transitions.` });
+      items.push({ cls: '', text: '<strong>Research Recommendations:</strong><br>1. Run Scenario S-1 (sinusoidal leader sweep 0.1–2.0 Hz) to validate frequency-domain string stability.<br>2. Compare results against PLEXE benchmark (Segata 2014) using identical CACC parameters.<br>3. Use ACC vs CACC comparison mode to quantify V2V communication benefit under emergency braking.' });
+      document.getElementById('conclusionsList').innerHTML = items.map(i => `<div class="conclusion-item ${i.cls}">${i.text}</div>`).join('');
+      document.getElementById('configBadges').innerHTML =
+        `<span class="badge" style="background:rgba(0,153,204,.15);color:#0099cc">τact=${data.config.tau_act || 0.25}s</span>
+     <span class="badge" style="background:rgba(153,102,204,.15);color:#9966cc">Ki=${data.config.ki || 0.01}</span>
+     <span class="badge" style="background:rgba(76,175,125,.15);color:#4caf7d">α=${data.config.alpha || 0.9}</span>
+     <span class="badge" style="background:rgba(230,168,23,.15);color:#e6a817">h=${data.config.time_headway || 0.8}s</span>
+     <span class="badge" style="background:rgba(102,126,234,.15);color:#a0b4ff">Topology=${data.config.topology || 'predecessor'}</span>
+     <span class="badge" style="background:rgba(204,51,51,.15);color:#cc3333">Sec.Delay=${data.config.security_delay_ms || 3}ms</span>`;
+    }
+
+    document.getElementById('exportBtn').addEventListener('click', () => { if (expData) window.open('/api/export_csv/' + expData.experiment_id, '_blank'); });
+    document.getElementById('newExpBtn').addEventListener('click', () => { window.location.href = '/configure'; });
+  </script>
+</body>
+
+</html>

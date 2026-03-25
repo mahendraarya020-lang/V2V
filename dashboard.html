@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Dashboard — V2V Research</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:linear-gradient(135deg,#e8eaf6 0%,#f3e5f5 100%);color:#2d3748;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;min-height:100vh;padding:24px;}
+.header{background:rgba(255,255,255,.95);backdrop-filter:blur(12px);padding:20px 30px;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.15);margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;}
+.logo{display:flex;flex-direction:column;gap:4px;}
+.logo-title{font-size:1.4rem;font-weight:800;color:#2d3748;}
+.logo-sub{font-size:.82rem;color:#718096;}
+.user-info{display:flex;align-items:center;gap:14px;}
+.user-chip{background:rgba(102,126,234,.15);border:1px solid rgba(102,126,234,.3);padding:8px 18px;border-radius:20px;font-size:.85rem;font-weight:600;color:#667eea;}
+.btn{padding:9px 20px;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:.85rem;text-decoration:none;display:inline-block;transition:all .2s;}
+.btn-red{background:rgba(245,101,101,.12);border:1px solid rgba(245,101,101,.3);color:#e53e3e;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.15);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-bottom:24px;}
+.card{background:rgba(255,255,255,.98);padding:24px;border-radius:16px;box-shadow:0 6px 24px rgba(102,126,234,.12);text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:10px;transition:all .25s;cursor:pointer;border:1px solid rgba(102,126,234,.1);}
+.card:hover{transform:translateY(-4px);box-shadow:0 12px 36px rgba(0,0,0,.18);}
+.card-icon{font-size:2.2rem;}
+.card-title{font-size:1.05rem;font-weight:800;color:#2d3748;}
+.card-desc{font-size:.82rem;color:#718096;line-height:1.5;}
+.card-badge{display:inline-block;padding:3px 10px;border-radius:5px;font-size:.72rem;font-weight:700;align-self:flex-start;}
+.badge-new{background:rgba(56,178,172,.12);color:#2c7a7b;}
+.badge-research{background:rgba(102,126,234,.12);color:#667eea;}
+.badge-core{background:rgba(118,75,162,.12);color:#764ba2;}
+.c1{border-top:3px solid #667eea;}.c2{border-top:3px solid #38b2ac;}.c3{border-top:3px solid #ed8936;}
+.c4{border-top:3px solid #ed64a6;}.c5{border-top:3px solid #764ba2;}.c6{border-top:3px solid #f6ad55;}
+.section-title{font-size:1rem;font-weight:800;color:#4a5568;margin-bottom:14px;}
+.ref-box{background:rgba(255,255,255,.92);border-radius:12px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08);}
+.ref-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
+.ref-item{background:rgba(102,126,234,.06);padding:10px 14px;border-radius:8px;font-size:.78rem;border-left:3px solid #667eea;}
+.ref-title{font-weight:700;color:#667eea;margin-bottom:3px;}
+.ref-sub{color:#718096;line-height:1.4;}
+.gap-fixes{background:rgba(255,255,255,.92);border-radius:12px;padding:18px;margin-bottom:24px;box-shadow:0 4px 16px rgba(0,0,0,.08);}
+.gap-fixes .section-title{color:#2d3748;text-shadow:none;}
+.gap-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:.82rem;color:#4a5568;}
+.gap-row:last-child{border:none;}
+.gap-id{background:rgba(102,126,234,.12);color:#667eea;padding:2px 8px;border-radius:4px;font-weight:700;font-size:.72rem;min-width:42px;text-align:center;}
+.gap-check{color:#38b2ac;font-weight:800;}
+</style>
+</head><body>
+<div class="header">
+  <div class="logo">
+    <div class="logo-title">🛜 V2V 5G Platooning Research Platform</div>
+    <div class="logo-sub">Research Build v3.0 — Gap Analysis Upgrades Applied | 3GPP Rel-16 | CACC/ACC | AoI-FSM</div>
+  </div>
+  <div class="user-info">
+    <div class="user-chip">👤 {{ user }}</div>
+    <a href="/logout" class="btn btn-red">Logout</a>
+  </div>
+</div>
+
+<!-- GAP FIX SUMMARY -->
+<div class="gap-fixes">
+  <div class="section-title" style="margin-bottom:10px">✅ Research Gap Fixes Applied (vs gap_analysis_rekomendasi)</div>
+  <div class="gap-row"><span class="gap-id">G-01</span><span class="gap-check">✓</span><span>FFT Frequency-Domain String Stability |AR(f)| ≤ 1 — Analysis page</span></div>
+  <div class="gap-row"><span class="gap-id">G-02</span><span class="gap-check">✓</span><span>3GPP TR 38.885 Path Loss Channel: n=1.77 LOS, σ=3dB shadowing, SINR-based PER</span></div>
+  <div class="gap-row"><span class="gap-id">G-03</span><span class="gap-check">✓</span><span>Stochastic ECDSA Security Delay ~ N(μ,0.5ms) (Brecht 2018) vs fixed constant</span></div>
+  <div class="gap-row"><span class="gap-id">G-05</span><span class="gap-check">✓</span><span>AoI Distribution + M/D/1 Theoretical Peak AoI Comparison (Kaul 2012)</span></div>
+  <div class="gap-row"><span class="gap-id">G-06</span><span class="gap-check">✓</span><span>Topology Selector: Predecessor Following ↔ Hybrid Leader+Predecessor (Ploeg 2014)</span></div>
+  <div class="gap-row"><span class="gap-id">G-08</span><span class="gap-check">✓</span><span>ACC vs CACC Split-Screen Comparison Mode — live side-by-side with same leader profile</span></div>
+  <div class="gap-row"><span class="gap-id">G-09</span><span class="gap-check">✓</span><span>Post-hoc FFT Analysis of Spacing Errors — frequency response charts in Analysis</span></div>
+  <div class="gap-row"><span class="gap-id">G-10</span><span class="gap-check">✓</span><span>Per-V2V-Link Latency Tracking — separate latency per follower-predecessor pair</span></div>
+</div>
+
+<!-- NAV CARDS -->
+<div class="section-title">Navigate</div>
+<div class="cards-grid">
+  <a class="card c1" href="/configure">
+    <div class="card-icon">⚙️</div>
+    <div class="card-title">Configure Simulation</div>
+    <div class="card-desc">PID+FF gains, τact actuation lag, AoI thresholds, communication topology, leader profile, 5G NR parameters, ECDSA overhead.</div>
+    <div class="card-badge badge-core">Core</div>
+  </a>
+  <a class="card c2" href="/simulation">
+    <div class="card-icon">🛜</div>
+    <div class="card-title">Live Simulation</div>
+    <div class="card-desc">Real-time V2V canvas with AR heatmap coloring, space-time diagram, per-vehicle FSM/AoI bars, actuation lag telemetry, disturbance injection.</div>
+    <div class="card-badge badge-core">Core</div>
+  </a>
+  <a class="card c3" href="/compare">
+    <div class="card-icon">⚖️</div>
+    <div class="card-title">ACC vs CACC Comparison</div>
+    <div class="card-desc">Split-screen live comparison of ACC (no V2V, 0.7s reaction) vs CACC (10ms V2V). Same leader disturbance. Demonstrates V2V benefit. Gap G-08.</div>
+    <div class="card-badge badge-new">NEW</div>
+  </a>
+  <a class="card c4" href="/analysis">
+    <div class="card-icon">📊</div>
+    <div class="card-title">Analysis & FFT</div>
+    <div class="card-desc">Post-experiment: FFT string stability |AR(f)|, amplitude ratio waterfall, AoI distribution vs M/D/1 theory, per-link latency, FSM timeline, conclusions.</div>
+    <div class="card-badge badge-research">Research</div>
+  </a>
+  <a class="card c5" href="/history">
+    <div class="card-icon">📁</div>
+    <div class="card-title">Experiment History</div>
+    <div class="card-desc">Browse past simulations with collision status, stability metrics, and CSV export for MATLAB/Python post-processing.</div>
+    <div class="card-badge badge-core">Core</div>
+  </a>
+
+</div>
+
+<!-- LITERATURE REFERENCES -->
+<div class="ref-box">
+  <div class="section-title" style="color:#4a5568">📚 Key Literature References</div>
+  <div class="ref-grid">
+    <div class="ref-item"><div class="ref-title">Rajamani (2000) + Ploeg (2011)</div><div class="ref-sub">PATH CACC PID+FF reference model. Defines string stability H(s) requirement.</div></div>
+    <div class="ref-item"><div class="ref-title">Segata et al. (2014) — PLEXE</div><div class="ref-sub">Purpose-built platooning simulator. Open-source benchmark for AR comparison.</div></div>
+    <div class="ref-item"><div class="ref-title">Kaul et al. (2012) — AoI</div><div class="ref-sub">Formal AoI definition Δ(t). M/D/1 peak AoI theory used in Analysis page.</div></div>
+    <div class="ref-item"><div class="ref-title">3GPP TR 38.885</div><div class="ref-sub">NR-V2X channel model: n=1.77, σ=3dB. Used in G-02 path loss model.</div></div>
+    <div class="ref-item"><div class="ref-title">Brecht et al. (2018)</div><div class="ref-sub">ECDSA-256 security overhead measured: mean 3ms, σ=0.5ms. Used in G-03.</div></div>
+    <div class="ref-item"><div class="ref-title">Swaroop & Hedrick (1996)</div><div class="ref-sub">String stability definition: |H(jω)| ≤ 1 ∀ω. Basis for FFT analysis (G-01).</div></div>
+  </div>
+</div>
+
+</body></html>

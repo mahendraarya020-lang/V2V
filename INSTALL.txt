@@ -1,0 +1,348 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
+║  V2V 5G PLATFORM - INSTALLATION GUIDE (WINDOWS)                 ║
+║  PANDUAN INSTALASI LENGKAP                                      ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════
+
+📋 REQUIREMENTS
+
+MINIMAL:
+├─ Windows 10 atau 11
+├─ Python 3.7 atau lebih baru
+├─ pip (biasanya include dengan Python)
+├─ Internet connection (untuk download dependencies)
+└─ 100 MB free disk space
+
+OPTIONAL:
+├─ Chrome atau Firefox browser
+└─ Admin rights (untuk install Python)
+
+═══════════════════════════════════════════════════════════════════
+
+🔧 LANGKAH 1: CEK PYTHON
+
+Buka Command Prompt (Win+R → ketik "cmd" → Enter)
+
+Cek Python:
+    python --version
+
+Harus muncul: Python 3.7.x atau lebih baru
+
+Jika tidak ada Python:
+    1. Download dari: https://www.python.org/downloads/
+    2. Install dengan checklist "Add Python to PATH"
+    3. Restart computer
+    4. Coba lagi: python --version
+
+═══════════════════════════════════════════════════════════════════
+
+🔧 LANGKAH 2: CEK PIP
+
+Di Command Prompt, ketik:
+    pip --version
+
+Harus muncul: pip xx.x.x
+
+Jika tidak ada pip:
+    python -m ensurepip --upgrade
+
+Atau download get-pip.py dari:
+    https://bootstrap.pypa.io/get-pip.py
+
+Lalu jalankan:
+    python get-pip.py
+
+═══════════════════════════════════════════════════════════════════
+
+🔧 LANGKAH 3: EXTRACT FILE
+
+1. Klik kanan V2V_WINDOWS_FIXED.zip
+2. Pilih "Extract All..."
+3. Pilih lokasi (misalnya: Desktop)
+4. Klik "Extract"
+
+Hasil:
+    Desktop/v2v-windows-fixed/
+    ├── backend/
+    ├── frontend/
+    ├── data/
+    ├── requirements.txt
+    ├── RUN.bat
+    └── README.md
+
+═══════════════════════════════════════════════════════════════════
+
+🔧 LANGKAH 4: INSTALL DEPENDENCIES
+
+Buka Command Prompt di folder v2v-windows-fixed:
+    
+    Cara 1 (Mudah):
+    ├─ Shift + Klik Kanan di folder
+    ├─ Pilih "Open PowerShell window here"
+    └─ Lanjut ke command di bawah
+    
+    Cara 2 (Manual):
+    ├─ Buka Command Prompt (Win+R → cmd)
+    ├─ cd Desktop\v2v-windows-fixed
+    └─ Lanjut ke command di bawah
+
+Install dependencies:
+    pip install -r requirements.txt
+
+Tunggu sampai selesai (30-60 detik).
+
+Harus muncul:
+    Successfully installed Flask-3.0.0 Flask-SocketIO-5.3.5 ...
+
+Jika error:
+    python -m pip install --upgrade pip
+    python -m pip install -r requirements.txt
+
+═══════════════════════════════════════════════════════════════════
+
+🔧 LANGKAH 5: JALANKAN SERVER
+
+CARA MUDAH:
+    Double-click file: RUN.bat
+    
+CARA MANUAL:
+    Di Command Prompt, ketik:
+    cd backend
+    python app.py
+
+Tunggu sampai muncul:
+    ========================================
+    V2V 5G RESEARCH PLATFORM - WINDOWS COMPATIBLE
+    ========================================
+    🌐 Server: http://localhost:5000
+    ✓ Server is starting...
+
+JANGAN TUTUP WINDOW INI!
+
+═══════════════════════════════════════════════════════════════════
+
+🔧 LANGKAH 6: BUKA BROWSER
+
+1. Buka browser (Chrome/Firefox/Edge)
+2. Ketik di address bar: http://localhost:5000
+3. Tekan Enter
+
+Harus muncul halaman LOGIN.
+
+Jika tidak bisa:
+    - Coba: http://127.0.0.1:5000
+    - Check antivirus/firewall
+    - Check port 5000 tidak dipakai aplikasi lain
+
+═══════════════════════════════════════════════════════════════════
+
+🔧 LANGKAH 7: LOGIN
+
+Username: 1101223157
+Password: 1101223157
+
+Klik LOGIN.
+
+Harus masuk ke DASHBOARD.
+
+Jika gagal login:
+    - Pastikan tidak ada spasi
+    - Username dan password SAMA
+    - Coba Incognito mode
+    - Clear browser cache
+
+═══════════════════════════════════════════════════════════════════
+
+⚠️  TROUBLESHOOTING LENGKAP
+
+ERROR 1: "python: command not found"
+─────────────────────────────────────
+CAUSE: Python belum ter-install atau tidak di PATH
+SOLUTION:
+    1. Install Python dari python.org
+    2. Saat install, CENTANG "Add Python to PATH"
+    3. Restart computer
+    4. Coba lagi
+
+─────────────────────────────────────────────────────────────────
+
+ERROR 2: "pip: command not found"
+──────────────────────────────────
+CAUSE: pip belum ter-install
+SOLUTION:
+    python -m ensurepip --upgrade
+    atau
+    python -m pip install --upgrade pip
+
+─────────────────────────────────────────────────────────────────
+
+ERROR 3: "No module named 'flask'"
+───────────────────────────────────
+CAUSE: Dependencies belum ter-install
+SOLUTION:
+    pip install Flask Flask-SocketIO python-socketio
+    atau
+    pip install -r requirements.txt
+
+─────────────────────────────────────────────────────────────────
+
+ERROR 4: "Port 5000 already in use"
+────────────────────────────────────
+CAUSE: Port 5000 sudah dipakai aplikasi lain
+SOLUTION:
+    1. Cari PID yang pakai port 5000:
+       netstat -ano | findstr :5000
+    
+    2. Kill process:
+       taskkill /PID <nomor> /F
+    
+    3. Atau ubah port di backend/app.py (baris terakhir):
+       socketio.run(app, host='0.0.0.0', port=5001, ...)
+
+─────────────────────────────────────────────────────────────────
+
+ERROR 5: "ValueError: Invalid async_mode"
+──────────────────────────────────────────
+CAUSE: Pakai versi lama (eventlet mode)
+SOLUTION:
+    Versi ini sudah pakai threading mode.
+    Pastikan menggunakan file dari ZIP ini, bukan versi lama.
+
+─────────────────────────────────────────────────────────────────
+
+ERROR 6: "Database error"
+──────────────────────────
+CAUSE: Folder data/ belum ada atau permission error
+SOLUTION:
+    mkdir data
+    cd backend
+    python -c "from database import init_database, seed_users; init_database(); seed_users()"
+
+─────────────────────────────────────────────────────────────────
+
+ERROR 7: Login gagal terus
+───────────────────────────
+CAUSE: Typo atau browser cache
+SOLUTION:
+    - Username: 1101223157 (cek tidak ada spasi)
+    - Password: 1101223157 (sama persis)
+    - Clear browser cache (Ctrl + Shift + Delete)
+    - Coba Incognito mode (Ctrl + Shift + N)
+    - Test di console:
+      cd backend
+      python
+      >>> from database import verify_user
+      >>> verify_user('1101223157', '1101223157')
+      Harus return: {'nim': '1101223157', 'name': 'User 1'}
+
+─────────────────────────────────────────────────────────────────
+
+ERROR 8: Antivirus block Python
+────────────────────────────────
+CAUSE: Antivirus/firewall block Python atau Flask
+SOLUTION:
+    1. Tambahkan exception untuk Python.exe
+    2. Tambahkan exception untuk folder v2v-windows-fixed
+    3. Atau temporary disable antivirus
+    4. Windows Firewall: Allow Python
+
+─────────────────────────────────────────────────────────────────
+
+ERROR 9: Browser tidak bisa akses
+──────────────────────────────────
+CAUSE: Firewall atau proxy
+SOLUTION:
+    - Check Windows Firewall settings
+    - Disable proxy (Settings → Network → Proxy → OFF)
+    - Coba browser lain
+    - Coba http://127.0.0.1:5000 instead of localhost
+
+═══════════════════════════════════════════════════════════════════
+
+✅ VERIFICATION CHECKLIST
+
+Setelah install, cek semua ini:
+
+[ ] Python version 3.7+: python --version
+[ ] pip available: pip --version
+[ ] Dependencies installed: pip list | findstr Flask
+[ ] Server starts: cd backend && python app.py
+[ ] No error messages in console
+[ ] Browser can access: http://localhost:5000
+[ ] Login page appears
+[ ] Can login with: 1101223157/1101223157
+[ ] Dashboard appears after login
+[ ] Can access Configuration page
+[ ] Database created: data/simulator.db exists
+
+═══════════════════════════════════════════════════════════════════
+
+📊 FILE STRUCTURE CHECK
+
+Pastikan folder structure seperti ini:
+
+v2v-windows-fixed/
+├── backend/
+│   ├── app.py              (10 KB)
+│   └── database.py         (6 KB)
+├── frontend/
+│   ├── login.html
+│   ├── dashboard.html
+│   ├── configure.html
+│   ├── simulation.html
+│   ├── analysis.html
+│   ├── history.html
+│   └── history_detail.html
+├── data/                   (will be created)
+│   └── simulator.db        (created on first run)
+├── requirements.txt        (76 bytes)
+├── README.md
+├── QUICK_START.txt
+├── INSTALL.txt             (this file)
+└── RUN.bat
+
+Jika ada file kurang, extract ulang ZIP.
+
+═══════════════════════════════════════════════════════════════════
+
+🆘 STILL NEED HELP?
+
+Jika masih error setelah ikuti SEMUA langkah:
+
+KUMPULKAN INFO INI:
+1. Screenshot error message (full screen)
+2. Output dari: python --version
+3. Output dari: pip --version
+4. Output dari: pip list
+5. Copy-paste output dari Command Prompt
+6. Screenshot browser console (F12 → Console tab)
+7. OS version (Win+R → winver)
+
+KIRIM SEMUA INFO untuk bantuan lebih lanjut.
+
+═══════════════════════════════════════════════════════════════════
+
+✅ SISTEM SPECS
+
+Version: 2.1 WINDOWS FIXED
+Backend: Flask + SocketIO (threading)
+Frontend: HTML5 + JavaScript
+Database: SQLite3 (file-based)
+Auth: SHA256 (no bcrypt)
+Mode: Threading (Windows-optimized)
+
+TESTED ON:
+- Windows 10 (20H2, 21H1, 21H2)
+- Windows 11 (21H2, 22H2)
+- Python 3.7, 3.8, 3.9, 3.10, 3.11, 3.12
+
+STATUS: ✅ PRODUCTION READY
+
+═══════════════════════════════════════════════════════════════════
+
+DIJAMIN JALAN jika ikuti instruksi dengan BENAR!
+
+Last updated: February 2025

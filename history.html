@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation History</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%);
+            color: #2d3748;
+            min-height: 100vh;
+        }
+
+        .nav {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .nav-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .nav-user {
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .btn-home {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #38b2ac 0%, #2c7a7b 100%);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-home:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(56, 178, 172, 0.4);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 30px;
+            color: #4a5568;
+            font-weight: 700;
+        }
+
+        .history-table {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f7fafc;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 700;
+            color: #667eea;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #4a5568;
+        }
+
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(56, 178, 172, 0.2);
+            color: #2c7a7b;
+        }
+
+        .status-danger {
+            background: rgba(245, 101, 101, 0.2);
+            color: #c53030;
+        }
+
+        .btn-view {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-view:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .empty-state h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .empty-state p {
+            margin-bottom: 20px;
+        }
+
+        .empty-state a {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .empty-state a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <div class="nav-left">
+            <div class="nav-title">V2V 5G PLATOONING RESEARCH PLATFORM</div>
+            <a href="/dashboard" class="btn-home">🏠 Home</a>
+        </div>
+        <div class="nav-user">
+            <span>{{user}}</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Simulation History</h1>
+
+        {% if history %}
+        <div class="history-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Vehicles</th>
+                        <th>Latency (ms)</th>
+                        <th>Packet Loss (%)</th>
+                        <th>Duration (s)</th>
+                        <th>Avg Error (m)</th>
+                        <th>Collision</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in history %}
+                    <tr>
+                        <td>{{ record.timestamp }}</td>
+                        <td>{{ record.num_vehicles }} × {{ record.num_platoons }}</td>
+                        <td>{{ record.latency_ms }}</td>
+                        <td>{{ record.packet_loss }}</td>
+                        <td>{{ "%.1f"|format(record.duration_seconds) }}</td>
+                        <td>{{ "%.2f"|format(record.avg_spacing_error) }}</td>
+                        <td>
+                            {% if record.collision_occurred %}
+                            <span class="status-badge status-danger">YES</span>
+                            {% else %}
+                            <span class="status-badge status-success">NO</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="/history_detail/{{ record.id }}" class="btn-view">View Details</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="history-table">
+            <div class="empty-state">
+                <h2>No Simulation History</h2>
+                <p>You haven't run any simulations yet.</p>
+                <a href="/configure">Start Your First Simulation</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

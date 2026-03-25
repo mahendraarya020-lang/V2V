@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Live Simulation — V2V Research</title>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════ DESIGN SYSTEM — MATCHING LOGIN ═══════════════════ */
+:root{
+  --bg-deep:#060612;--bg-surface:rgba(255,255,255,.98);
+  --glass:rgba(255,255,255,.98);--glass-border:rgba(102,126,234,.18);
+  --neon-cyan:#667eea;--neon-green:#2c7a7b;--neon-magenta:#764ba2;
+  --neon-amber:#c05621;--neon-red:#c53030;--neon-purple:#764ba2;
+  --text-primary:#2d3748;--text-muted:#4a5568;--text-dim:#718096;
+  --glow-sm:0 0 6px;--glow-md:0 0 14px;--glow-lg:0 0 28px;
+  --radius:10px;--radius-lg:14px;
+  --font-display:'Segoe UI',Tahoma,sans-serif;--font-body:'Segoe UI',Tahoma,sans-serif;--font-mono:'Consolas',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:linear-gradient(135deg,#e8eaf6 0%,#f3e5f5 100%);color:var(--text-primary);font-family:var(--font-body);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+/* ─── ANIMATIONS ─── */
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+@keyframes floatSlow{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+@keyframes pulseGlow{0%,100%{opacity:.7;filter:brightness(1);}50%{opacity:1;filter:brightness(1.3);}}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+@keyframes borderPulse{0%,100%{border-color:rgba(0,240,255,.15);}50%{border-color:rgba(0,240,255,.35);}}
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+@keyframes scanline{0%{top:-100%;}100%{top:200%;}}
+/* ─── NAV BAR ─── */
+.nav{background:rgba(255,255,255,.98);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:8px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(102,126,234,.15);flex-shrink:0;flex-wrap:wrap;position:relative;z-index:10;box-shadow:0 2px 12px rgba(102,126,234,.08);}
+.nav::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#667eea,#764ba2,transparent);opacity:.3;}
+.nav-title{color:#667eea;font-family:var(--font-display);font-weight:900;font-size:.85rem;letter-spacing:.12em;}
+.btn{padding:6px 14px;border:1px solid var(--glass-border);border-radius:var(--radius);font-family:var(--font-body);font-weight:700;cursor:pointer;font-size:.78rem;transition:all .25s cubic-bezier(.4,0,.2,1);text-decoration:none;display:inline-block;backdrop-filter:blur(8px);position:relative;overflow:hidden;}
+.btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.08),transparent);opacity:0;transition:opacity .25s;}
+.btn:hover::before{opacity:1;}
+.btn-green{background:linear-gradient(135deg,rgba(56,178,172,.3),rgba(44,122,123,.3));color:var(--neon-green);border-color:rgba(56,178,172,.3);}
+.btn-purple{background:linear-gradient(135deg,rgba(102,126,234,.3),rgba(118,75,162,.3));color:#b794f6;border-color:rgba(102,126,234,.3);}
+.btn-red{background:linear-gradient(135deg,rgba(245,101,101,.3),rgba(197,48,48,.3));color:var(--neon-red);border-color:rgba(245,101,101,.3);}
+.btn-orange{background:linear-gradient(135deg,rgba(237,137,54,.3),rgba(192,86,33,.3));color:var(--neon-amber);border-color:rgba(237,137,54,.3);}
+.btn-teal{background:rgba(0,240,255,.06);border:1px solid rgba(0,240,255,.25);color:var(--neon-cyan);}
+.btn:hover{transform:translateY(-2px);box-shadow:var(--glow-sm) var(--neon-cyan);filter:brightness(1.2);}
+.btn:active{transform:translateY(0);filter:brightness(.9);}
+.nav-time{background:rgba(102,126,234,.08);padding:6px 16px;border-radius:var(--radius);font-family:var(--font-display);font-size:1rem;font-weight:900;color:#667eea;border:1px solid rgba(102,126,234,.2);letter-spacing:.08em;}
+.nav-sep{width:1px;height:22px;background:linear-gradient(180deg,transparent,var(--glass-border),transparent);}
+/* ─── WORKSPACE ─── */
+.workspace{display:grid;grid-template-columns:1fr 350px;flex:1;min-height:0;gap:0;}
+.canvas-area{display:flex;flex-direction:column;min-height:0;position:relative;}
+#mainCanvas{flex:1;min-height:0;cursor:grab;display:block;background:var(--bg-deep);}
+#mainCanvas:active{cursor:grabbing;}
+#stWrap{flex-shrink:0;background:var(--bg-deep);border-top:1px solid var(--glass-border);transition:height .4s cubic-bezier(.4,0,.2,1);overflow:hidden;}
+#stCanvas{width:100%;display:block;}
+/* ─── PANEL ─── */
+.panel{background:rgba(255,255,255,.98);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-left:1px solid rgba(102,126,234,.12);display:flex;flex-direction:column;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(102,126,234,.2) transparent;box-shadow:-2px 0 12px rgba(102,126,234,.06);}
+.panel::-webkit-scrollbar{width:4px;}
+.panel::-webkit-scrollbar-track{background:transparent;}
+.panel::-webkit-scrollbar-thumb{background:rgba(102,126,234,.25);border-radius:4px;}
+.pbox{padding:14px 16px;border-bottom:1px solid rgba(102,126,234,.08);animation:fadeSlideUp .4s ease-out both;}
+.plabel{font-family:var(--font-display);font-size:.6rem;color:#667eea;text-transform:uppercase;font-weight:700;margin-bottom:10px;letter-spacing:.15em;}
+.kpi-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.km{background:rgba(102,126,234,.04);padding:10px 12px;border-radius:var(--radius);text-align:center;border:1px solid rgba(102,126,234,.1);transition:all .3s;position:relative;overflow:hidden;}
+.km::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#667eea,transparent);opacity:.3;}
+.km:hover{border-color:rgba(102,126,234,.25);box-shadow:inset 0 0 20px rgba(102,126,234,.04);}
+.km-label{font-family:var(--font-display);font-size:.55rem;color:#718096;text-transform:uppercase;letter-spacing:.1em;}
+.km-val{font-size:1.1rem;font-family:var(--font-mono);font-weight:700;color:#2c7a7b;}
+/* ─── VEHICLE CARDS ─── */
+.veh-card{background:rgba(255,255,255,.95);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px;border-left:3px solid #667eea;transition:all .35s cubic-bezier(.4,0,.2,1);border:1px solid rgba(102,126,234,.1);border-left-width:3px;position:relative;overflow:hidden;}
+.veh-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(102,126,234,.02),transparent);pointer-events:none;}
+.veh-card:hover{transform:translateX(3px);box-shadow:0 2px 8px rgba(102,126,234,.1);border-color:rgba(102,126,234,.2);}
+.veh-card.degraded{border-left-color:#c05621;}
+.veh-card.acc-mode{border-left-color:#764ba2;}
+.veh-card.emergency{border-left-color:#c53030;animation:borderPulse 1s ease-in-out infinite;}
+.veh-card.collided{border-left-color:#c53030;background:rgba(245,101,101,.06);}
+.veh-card.transfer-mode{border-left-color:#667eea;}
+.veh-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.veh-id{font-family:var(--font-display);font-weight:700;font-size:.78rem;color:#4a5568;letter-spacing:.05em;}
+.fsm-badge{font-family:var(--font-mono);font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.05em;}
+.fsm-CACC{background:rgba(102,126,234,.1);color:#667eea;border:1px solid rgba(102,126,234,.2);}
+.fsm-DEGRADED{background:rgba(237,137,54,.1);color:#c05621;border:1px solid rgba(237,137,54,.2);}
+.fsm-ACC{background:rgba(118,75,162,.1);color:#764ba2;border:1px solid rgba(118,75,162,.2);}
+.fsm-EMERGENCY{background:rgba(245,101,101,.12);color:#c53030;border:1px solid rgba(245,101,101,.2);animation:pulseGlow 1.5s ease-in-out infinite;}
+.fsm-TRANSFER{background:rgba(102,126,234,.1);color:#667eea;border:1px solid rgba(102,126,234,.2);}
+.veh-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;}
+.vm{text-align:center;padding:2px 0;}
+.vm-label{font-size:.55rem;color:#718096;font-family:var(--font-display);letter-spacing:.05em;}
+.vm-val{font-size:.8rem;font-family:var(--font-mono);font-weight:700;color:#2d3748;}
+.aoi-row{display:flex;align-items:center;gap:6px;margin-top:6px;}
+.aoi-label{font-size:.55rem;color:var(--text-muted);width:28px;font-family:var(--font-display);}
+.aoi-bar-bg{flex:1;height:4px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;}
+.aoi-bar-fill{height:100%;border-radius:4px;transition:width .3s cubic-bezier(.4,0,.2,1),background .3s;box-shadow:var(--glow-sm) currentColor;}
+.aoi-val{font-size:.6rem;font-family:var(--font-mono);color:var(--text-muted);width:42px;text-align:right;}
+/* ─── NETWORK ─── */
+.net-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(102,126,234,.06);font-size:.78rem;}
+.net-row:last-child{border:none;}
+.net-key{color:#718096;font-family:var(--font-body);}
+.net-val{font-family:var(--font-mono);font-weight:600;color:#2d3748;}
+.delay-bar{height:6px;border-radius:4px;overflow:hidden;display:flex;margin-top:6px;background:rgba(255,255,255,.03);}
+.db-net{background:linear-gradient(90deg,#00f0ff,#38b2ac);box-shadow:0 0 8px rgba(0,240,255,.3);}
+.db-sec{background:linear-gradient(90deg,#a855f7,#7c3aed);box-shadow:0 0 8px rgba(168,85,247,.3);}
+#latencyMiniChart{max-height:70px;}
+/* ─── DISTURBANCE / PLATOON ─── */
+.dist-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.dist-btn{padding:8px;font-size:.72rem;border:1px solid rgba(102,126,234,.15);background:rgba(255,255,255,.95);color:#4a5568;border-radius:var(--radius);cursor:pointer;transition:all .3s cubic-bezier(.4,0,.2,1);font-family:var(--font-body);font-weight:600;backdrop-filter:blur(8px);position:relative;overflow:hidden;}
+.dist-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(102,126,234,.04),transparent);opacity:0;transition:opacity .3s;}
+.dist-btn:hover{background:rgba(102,126,234,.08);border-color:rgba(102,126,234,.25);color:#667eea;transform:translateY(-1px);box-shadow:0 2px 8px rgba(102,126,234,.12);}
+.dist-btn:hover::after{opacity:1;}
+.cooldown-bar{height:3px;border-radius:3px;background:rgba(0,240,255,.08);margin-top:5px;overflow:hidden;}
+.cooldown-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-green));transition:width .3s;box-shadow:0 0 6px var(--neon-cyan);}
+.precond-ok{color:var(--neon-green);font-family:var(--font-mono);font-size:.7rem;padding:4px 10px;background:rgba(0,255,136,.06);border-radius:var(--radius);border:1px solid rgba(0,255,136,.15);}
+.precond-err{color:var(--neon-red);font-family:var(--font-mono);font-size:.7rem;padding:4px 10px;background:rgba(255,51,85,.06);border-radius:var(--radius);border:1px solid rgba(255,51,85,.15);}
+.precond-warn{color:var(--neon-amber);font-family:var(--font-mono);font-size:.7rem;padding:4px 10px;background:rgba(255,179,0,.06);border-radius:var(--radius);border:1px solid rgba(255,179,0,.15);}
+.queue-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-family:var(--font-mono);font-size:.62rem;font-weight:700;}
+.queue-free{background:rgba(0,255,136,.08);color:var(--neon-green);border:1px solid rgba(0,255,136,.2);box-shadow:var(--glow-sm) rgba(0,255,136,.1);}
+.queue-busy{background:rgba(255,51,85,.08);color:var(--neon-red);border:1px solid rgba(255,51,85,.2);animation:pulseGlow 2s infinite;}
+.emrg-promo{position:fixed;top:20px;right:20px;background:var(--glass);backdrop-filter:blur(20px);color:var(--neon-red);padding:14px 24px;border-radius:var(--radius-lg);font-family:var(--font-display);font-weight:700;font-size:.8rem;z-index:999;display:none;border:1px solid rgba(255,51,85,.3);box-shadow:var(--glow-lg) rgba(255,51,85,.3);}
+.speed-info{font-size:.7rem;color:var(--text-muted);margin-top:4px;font-family:var(--font-body);}
+.speed-info span{color:var(--neon-green);font-family:var(--font-mono);}
+/* ─── TABS ─── */
+.ptab-bar{display:flex;gap:4px;padding:8px 14px 0;flex-shrink:0;}
+.ptab{padding:5px 12px;border-radius:var(--radius) var(--radius) 0 0;font-family:var(--font-display);font-size:.62rem;font-weight:700;cursor:pointer;border:1px solid rgba(102,126,234,.12);border-bottom:none;background:rgba(255,255,255,.6);color:#718096;transition:all .3s;letter-spacing:.08em;}
+.ptab.active{background:rgba(102,126,234,.08);border-color:rgba(102,126,234,.25);color:#667eea;}
+.ptab:hover:not(.active){background:rgba(102,126,234,.04);color:#4a5568;}
+.ptab-panel{display:none;}.ptab-panel.active{display:block;}
+/* ─── OVERLAYS ─── */
+.overlay{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:5;}
+.ol-badge{background:rgba(255,255,255,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:6px 12px;border-radius:var(--radius);font-family:var(--font-mono);font-size:.7rem;font-weight:700;color:#2d3748;border:1px solid rgba(102,126,234,.15);animation:floatSlow 6s ease-in-out infinite;box-shadow:0 4px 12px rgba(102,126,234,.1);}
+.ol-badge:nth-child(2){animation-delay:.8s;}
+.ol-badge:nth-child(3){animation-delay:1.6s;}
+.ol-badge:nth-child(4){animation-delay:2.4s;}
+.collision-alert{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--glass);backdrop-filter:blur(20px);color:var(--neon-red);padding:20px 36px;border-radius:var(--radius-lg);font-family:var(--font-display);font-size:1.1rem;font-weight:900;display:none;text-align:center;z-index:100;border:1px solid rgba(255,51,85,.4);box-shadow:var(--glow-lg) rgba(255,51,85,.4);letter-spacing:.1em;}
+#debugPanel{position:absolute;bottom:140px;left:12px;background:var(--glass);backdrop-filter:blur(16px);border:1px solid rgba(0,240,255,.2);border-radius:var(--radius);padding:10px 12px;font-family:var(--font-mono);font-size:.62rem;color:var(--neon-green);pointer-events:none;max-width:320px;line-height:1.7;display:none;}
+.ar-legend{display:flex;flex-wrap:wrap;gap:8px;font-size:.68rem;color:var(--text-muted);font-family:var(--font-body);}
+.ar-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;box-shadow:var(--glow-sm) currentColor;}
+</style>
+</head><body>
+<div class="nav">
+  <span class="nav-title">🛜 V2V Platoon Simulator</span>
+  <div class="nav-sep"></div>
+  <span class="nav-time" id="simTime">0.0s</span>
+  <button class="btn btn-purple" id="startBtn">▶ START</button>
+  <button class="btn btn-red" id="stopBtn" style="display:none">■ STOP</button>
+  <div class="nav-sep"></div>
+  <a href="/configure" class="btn btn-green">⚙ Config</a>
+  <a href="/compare" class="btn btn-teal">⚖ Compare</a>
+  <a href="/analysis" class="btn btn-orange">📊 Analysis</a>
+  <a href="/dashboard" class="btn btn-green">🏠 Home</a>
+  <div class="nav-sep"></div>
+  <button class="btn btn-teal" onclick="zoomIn()" title="Zoom In (+)">🔍+</button>
+  <button class="btn btn-teal" onclick="zoomOut()" title="Zoom Out (-)">🔍−</button>
+  <button class="btn btn-teal" onclick="viewAll()" title="Tampilkan semua platoon (F)">🗺 Semua</button>
+  <button class="btn btn-teal" onclick="resetCam()" title="Reset kamera (R)">⟳</button>
+  <label style="font-size:.72rem;color:#a0aec0;display:flex;align-items:center;gap:4px">
+    <input type="checkbox" id="followLeader" checked> Follow
+  </label>
+  <label style="font-size:.72rem;color:#a0aec0;display:flex;align-items:center;gap:4px">
+    <input type="checkbox" id="showST" checked> Space-Time
+  </label>
+  <label style="font-size:.72rem;color:#a0aec0;display:flex;align-items:center;gap:4px">
+    <input type="checkbox" id="showDebug"> Debug
+  </label>
+</div>
+
+<div class="workspace">
+  <div class="canvas-area">
+    <canvas id="mainCanvas"></canvas>
+    <div id="stWrap" style="height:130px">
+      <canvas id="stCanvas"></canvas>
+    </div>
+    <div class="overlay">
+      <div class="ol-badge" id="siOverlay">SI: 1.00 — STABLE</div>
+      <div class="ol-badge" id="aoidOverlay">Max AoI: 0ms</div>
+      <div class="ol-badge" id="pdrOverlay">PDR: 100%</div>
+      <div class="ol-badge" id="topologyOverlay">Topology: predecessor</div>
+    </div>
+    <div id="debugPanel"><div id="dbgContent">Waiting...</div></div>
+    <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+      background:rgba(0,0,0,.55);border-radius:8px;padding:4px 14px;
+      font-size:.65rem;color:rgba(255,255,255,.4);pointer-events:none;white-space:nowrap">
+      Drag to pan &nbsp;·&nbsp; Scroll / pinch to zoom &nbsp;·&nbsp;
+      <kbd style="background:rgba(255,255,255,.12);border-radius:3px;padding:0 3px">F</kbd> Semua platoon &nbsp;·&nbsp;
+      <kbd style="background:rgba(255,255,255,.12);border-radius:3px;padding:0 3px">R</kbd> Reset &nbsp;·&nbsp;
+      <kbd style="background:rgba(255,255,255,.12);border-radius:3px;padding:0 3px">+ −</kbd> Zoom
+    </div>
+    <div class="emrg-promo" id="emergencyPromoAlert">⚡ EMERGENCY PROMOTION!</div>
+<div class="collision-alert" id="collisionAlert">💥 COLLISION DETECTED</div>
+  </div>
+  <div class="panel">
+    <div class="ptab-bar">
+      <div class="ptab active" onclick="showPTab(event,'ptab-vehicles')">Vehicles</div>
+      <div class="ptab" onclick="showPTab(event,'ptab-network')">Network</div>
+      <div class="ptab" onclick="showPTab(event,'ptab-disturbance')">Disturbance</div>
+      <div class="ptab" onclick="showPTab(event,'ptab-platoon')">🚛 Platoons</div>
+    </div>
+    <div class="ptab-panel active" id="ptab-vehicles">
+      <div class="pbox">
+        <div class="plabel">System KPIs</div>
+        <div class="kpi-mini">
+          <div class="km"><div class="km-label">Stability</div><div class="km-val" id="kSI">1.00</div></div>
+          <div class="km"><div class="km-label">Max AoI</div><div class="km-val" id="kAoI">0ms</div></div>
+          <div class="km"><div class="km-label">PDR</div><div class="km-val" id="kPDR">100%</div></div>
+          <div class="km"><div class="km-label">Mode</div><div class="km-val" id="kMode">CACC</div></div>
+        </div>
+      </div>
+      <div class="pbox"><div class="plabel">Vehicle Telemetry</div><div id="vehicleCards"></div></div>
+      <div class="pbox">
+        <div class="plabel">FSM State Legend</div>
+        <div class="ar-legend">
+          <span><span class="ar-dot" style="background:#00ffff"></span> Leader</span>
+          <span><span class="ar-dot" style="background:#38b2ac"></span> CACC</span>
+          <span><span class="ar-dot" style="background:#00bcd4"></span> TRANSFER</span>
+          <span><span class="ar-dot" style="background:#f6ad55"></span> DEGRADED</span>
+          <span><span class="ar-dot" style="background:#9f7aea"></span> ACC</span>
+          <span><span class="ar-dot" style="background:#f56565"></span> EMERGENCY</span>
+        </div>
+      </div>
+    </div>
+    <div class="ptab-panel" id="ptab-network">
+      <div class="pbox"><div class="plabel">5G Network (3GPP TR 38.885)</div><div id="netMetrics"></div></div>
+      <div class="pbox"><div class="plabel">Delay Breakdown</div><div id="delayBreakdown"></div></div>
+      <div class="pbox"><div class="plabel">Per-Link Latency (G-10)</div><div id="perLinkLatency"></div></div>
+      <div class="pbox"><div class="plabel">Latency History</div><canvas id="latencyMiniChart"></canvas></div>
+    </div>
+    <div class="ptab-panel" id="ptab-disturbance">
+      <div class="pbox">
+        <div class="plabel">Inject Disturbance</div>
+        <div class="dist-grid">
+          <button class="dist-btn" onclick="disturbance('leader_brake')">🛑 Leader Brake<br><span style="color:#718096;font-weight:400">-6 m/s² for 3s</span></button>
+          <button class="dist-btn" onclick="disturbance('acceleration_spike')">⬆ Accel Spike<br><span style="color:#718096;font-weight:400">+3 m/s²</span></button>
+          <button class="dist-btn" onclick="disturbance('network_degradation')">📡 Net Degrade<br><span style="color:#718096;font-weight:400">30% loss × 5s</span></button>
+          <button class="dist-btn" onclick="disturbance('rsu_offline')">🔌 RSU Offline<br><span style="color:#718096;font-weight:400">Disable RSU</span></button>
+        </div>
+        <div style="margin-top:10px;font-size:.72rem;color:#718096">Ref: GCDC Scenario S-2 / S-3. Ploeg et al. (2011).</div>
+      </div>
+      <div class="pbox"><div class="plabel">Event Log</div><div id="eventLog" style="font-size:.72rem;max-height:200px;overflow-y:auto"></div></div>
+    </div>
+    <!-- PLATOON MANAGEMENT TAB — Protocol-Compliant v6.0 -->
+    <div class="ptab-panel" id="ptab-platoon">
+      <!-- ManeuverQueue Status -->
+      <div class="pbox">
+        <div class="plabel">🔄 Status ManeuverQueue <span style="font-size:.62rem;color:#718096">(§7.5.1 Deadlock Prevention)</span></div>
+        <div id="queueStatusBadge" style="margin-bottom:6px">
+          <span class="queue-badge queue-free">Bebas — tidak ada manuver aktif</span>
+        </div>
+        <div id="queueActivePlatoons" style="font-size:.68rem;color:#718096"></div>
+      </div>
+
+      <!-- Tambah Platoon -->
+      <div class="pbox">
+        <div class="plabel">+ Tambah Platoon Baru</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <label style="font-size:.75rem;color:#a0aec0">Jml Kendaraan:</label>
+          <input type="number" id="newPlatoonVehicles" value="3" min="2" max="8"
+            style="width:60px;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#e2e8f0;padding:4px 8px;font-size:.85rem">
+        </div>
+        <button class="dist-btn" style="width:100%;padding:10px;font-size:.8rem" onclick="addPlatoon()">Tambah Platoon</button>
+        <div style="font-size:.68rem;color:#718096;margin-top:6px">Ref: Bergenhem et al. (2012) §NEW-01</div>
+      </div>
+
+      <!-- Swap Leader (§6) -->
+      <div class="pbox">
+        <div class="plabel">🔄 Tukar Leader Antar Platoon <span style="font-size:.62rem;color:#718096">(§6 Protokol Swap)</span></div>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <div style="flex:1">
+            <label style="font-size:.72rem;color:#a0aec0;display:block;margin-bottom:3px">Platoon A:</label>
+            <select id="swapPlatoonA" onchange="validateSwap()" style="width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#e2e8f0;padding:5px 8px;font-size:.8rem">
+              <option value="">-- Pilih --</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <label style="font-size:.72rem;color:#a0aec0;display:block;margin-bottom:3px">Platoon B:</label>
+            <select id="swapPlatoonB" onchange="validateSwap()" style="width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#e2e8f0;padding:5px 8px;font-size:.8rem">
+              <option value="">-- Pilih --</option>
+            </select>
+          </div>
+        </div>
+        <div id="swapPrecond" style="margin-bottom:6px"></div>
+        <div id="swapSpeedInfo" class="speed-info"></div>
+        <button class="dist-btn" id="swapBtn" style="width:100%;padding:10px;font-size:.8rem;background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.4);margin-top:6px"
+          onclick="swapLeaders()">⇆ Tukar Leader (S1–S6 ✓)</button>
+        <div style="font-size:.67rem;color:#718096;margin-top:5px">Validasi S1-S6 otomatis. Ref: §6.3, Bergenhem et al. (2012).</div>
+      </div>
+
+      <!-- Promosi Leader (§5) -->
+      <div class="pbox">
+        <div class="plabel">⬆ Promosi Leader Intra-Platoon <span style="font-size:.62rem;color:#718096">(§5 Protokol Promosi)</span></div>
+        <div style="margin-bottom:6px">
+          <label style="font-size:.72rem;color:#a0aec0;display:block;margin-bottom:3px">Pilih Platoon:</label>
+          <select id="promotePlatoon" onchange="validatePromote()" style="width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#e2e8f0;padding:5px 8px;font-size:.8rem">
+            <option value="">-- Pilih platoon --</option>
+          </select>
+        </div>
+        <div id="promotePrecond" style="margin-bottom:6px"></div>
+        <button class="dist-btn" id="promoteBtn" style="width:100%;padding:10px;font-size:.8rem;background:rgba(246,173,85,.1);border-color:rgba(246,173,85,.4)"
+          onclick="promoteLeader()">👑 Promosikan Kendaraan Ke-2 (Prop 5.1 ✓)</button>
+        <div style="font-size:.67rem;color:#718096;margin-top:5px">V2→Leader, Leader→Ekor. Ref: §5.2, Ploeg et al. (2011).</div>
+      </div>
+
+      <!-- Transfer Kendaraan (§4) -->
+      <div class="pbox">
+        <div class="plabel">🚗 Transfer Kendaraan Antar Platoon <span style="font-size:.62rem;color:#718096">(§4 Protokol Transfer)</span></div>
+        <div style="margin-bottom:6px">
+          <label style="font-size:.75rem;color:#a0aec0;display:block;margin-bottom:4px">Kendaraan:</label>
+          <select id="transferVehicleId" onchange="validateTransfer()"
+            style="width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#e2e8f0;padding:5px 8px;font-size:.82rem">
+            <option value="">-- Pilih kendaraan --</option>
+          </select>
+        </div>
+        <div style="margin-bottom:8px">
+          <label style="font-size:.75rem;color:#a0aec0;display:block;margin-bottom:4px">Platoon Tujuan:</label>
+          <select id="transferTargetPlatoon" onchange="validateTransfer()"
+            style="width:100%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.2);border-radius:6px;color:#e2e8f0;padding:5px 8px;font-size:.82rem">
+            <option value="">-- Pilih platoon --</option>
+          </select>
+        </div>
+        <div id="transferPrecond" style="margin-bottom:8px"></div>
+        <button class="dist-btn" id="transferBtn" style="width:100%;padding:10px;font-size:.8rem;background:rgba(159,114,234,.15);border-color:rgba(159,114,234,.4)"
+          onclick="transferVehicle()">Transfer Kendaraan (C1–C6 ✓)</button>
+        <div style="font-size:.68rem;color:#718096;margin-top:6px">Validasi C1-C6 otomatis. Ref: §4.2, §4.5 Algoritma 1.</div>
+      </div>
+
+      <!-- Protocol FSM Visualizer -->
+      <div class="pbox">
+        <div class="plabel">📊 FSM Protocol State</div>
+        <div id="fsmVisualizer" style="font-size:.68rem"></div>
+      </div>
+
+      <!-- Status Platoon Aktif -->
+      <div class="pbox">
+        <div class="plabel">Status Platoon Aktif</div>
+        <div id="platoonStatusList" style="font-size:.75rem;max-height:200px;overflow-y:auto"></div>
+        <button class="dist-btn" style="width:100%;margin-top:8px;font-size:.75rem" onclick="refreshPlatoonInfo()">Refresh Status</button>
+      </div>
+
+      <!-- Transfer/Maneuver Log -->
+      <div class="pbox">
+        <div class="plabel">Maneuver Log <span style="font-size:.62rem;color:#718096">(§9.7 Event Log)</span></div>
+        <div id="transferLog" style="font-size:.67rem;max-height:140px;overflow-y:auto;font-family:monospace"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// DEBUG LOGGER
+// ════════════════════════════════════════════════════════════
+const DEBUG = true;
+function dbg(...a)  { if (DEBUG) console.log('[V2V-SIM]', ...a); }
+function dbgW(...a) { if (DEBUG) console.warn('[V2V-SIM]', ...a); }
+
+document.getElementById('showDebug').addEventListener('change', e => {
+  document.getElementById('debugPanel').style.display = e.target.checked ? 'block' : 'none';
+});
+
+// ════════════════════════════════════════════════════════════
+// CONFIG & SOCKET
+// ════════════════════════════════════════════════════════════
+const cfg = JSON.parse(
+  sessionStorage.getItem('simulationConfig') ||
+  '{"num_vehicles":4,"num_platoons":1,"initial_spacing":15,"desired_speed":20,' +
+  '"latency_ms":10,"packet_loss":1,"jitter_ms":2,"kp":0.5,"kd":0.3,"ki":0.01,' +
+  '"alpha":0.9,"tau_act":0.25,"time_headway":0.8,"security_delay_ms":3,' +
+  '"network_slicing":"URLLC","rsu_enabled":true,"topology":"predecessor",' +
+  '"leader_profile":"normal","max_accel":3,"max_decel":6,"bandwidth_mbps":100}'
+);
+dbg('Config:', cfg);
+
+const socket = io(window.location.origin, { transports:['websocket','polling'], reconnection:true });
+
+// ════════════════════════════════════════════════════════════
+// CANVAS ELEMENTS
+// ════════════════════════════════════════════════════════════
+const mc    = document.getElementById('mainCanvas');
+const ctx   = mc.getContext('2d');
+const stc   = document.getElementById('stCanvas');
+const stCtx = stc.getContext('2d');
+
+// ════════════════════════════════════════════════════════════
+// CAMERA STATE
+//
+// COORDINATE SYSTEM (critical — this was the root cause of the bug):
+//
+//   World: vehicle position P in metres (e.g. 455 – 500 m)
+//   Screen transform applied in renderScene():
+//       ctx.translate(W/2 - camX,  H - camY)   ← sets screen origin
+//       ctx.scale(1, zoom)                       ← Y scale only
+//   Vehicle drawn at world_y = -P * MSCALE      ← negative = upward
+//
+//   Screen pixel Y:  screen_y = (-P * MSCALE * zoom) + (H - camY)
+//
+//   To centre vehicle on screen (screen_y = H/2):
+//       H/2 = -P*MSCALE*zoom + H - camY
+//       camY = H/2 - P*MSCALE*zoom    ← CORRECT (note: negative for P~500)
+//
+//   The PREVIOUS bug used the inverted formula:
+//       camY = P*MSCALE*zoom - H/2    ← WRONG → vehicles at screen_y ≈ -3250px
+// ════════════════════════════════════════════════════════════
+const MSCALE = 4.0;      // base pixels-per-metre
+let camX = 0, camY = 0, zoom = 1.0;
+let cameraInitialized = false;   // BUG-1 fix: snap on first frame
+let dragging = false, dragStart = {x:0, y:0};
+
+// ── TRANSFER ANIMATION STATE ───────────────────────────────
+// Tracks vehicles currently animating lane-change (X interpolation only)
+// { vid: { fromX, toX, startTime, duration, color } }
+const activeTransitions = {};
+let prevPlatoonIds = {};   // vid -> last known platoon_id
+// v7: track IN_TRANSIT animation state (fase 3 multi-phase transfer)
+const inTransitState = {};  // vid -> { srcX, destX, startTime, duration }
+
+// Compute the correct camY so that world position P appears at screen centre
+function camYForPosition(P) {
+  return mc.height / 2 - P * MSCALE * zoom;
+}
+
+// ── CAMERA FUNCTIONS ───────────────────────────────────────
+function zoomIn()  { zoom = Math.min(4.0, zoom + 0.2); }
+function zoomOut() { zoom = Math.max(0.2, zoom - 0.15); }
+
+function viewAll() {
+  if (!lastState || !lastState.vehicles.length) return;
+  const pids = [...new Set(lastState.vehicles.map(v=>v.platoon_id))].sort();
+  const nP = Math.max(1, pids.length);
+  const LANE_W = 150, SHOULDER = 50;
+  const totalW = nP * LANE_W + SHOULDER * 2;
+  // Zoom so road fills ~80% of canvas width
+  zoom = Math.min(4.0, Math.max(0.2, (mc.width * 0.80) / totalW));
+  camX = 0;   // centre horizontally
+  document.getElementById('followLeader').checked = true;
+  cameraInitialized = false;  // re-snap Y to leader
+  dbg('viewAll: zoom=', zoom.toFixed(2), 'nP=', nP);
+}
+
+function resetCam() {
+  camX = 0; zoom = 1.0;
+  cameraInitialized = false;
+  dbg('Camera reset — will snap to leader on next update');
+}
+
+// ── MOUSE / WHEEL CAMERA ───────────────────────────────────
+mc.addEventListener('mousedown', e => {
+  dragging = true;
+  dragStart = {x: e.clientX + camX, y: e.clientY + camY};
+  // Uncheck Follow Leader when user manually drags
+  if (e.buttons === 1) document.getElementById('followLeader').checked = false;
+});
+mc.addEventListener('mousemove', e => {
+  if (dragging) { camX = dragStart.x - e.clientX; camY = dragStart.y - e.clientY; }
+});
+mc.addEventListener('mouseup',    () => dragging = false);
+mc.addEventListener('mouseleave', () => dragging = false);
+mc.addEventListener('wheel', e => {
+  const factor = e.deltaY > 0 ? -0.1 : 0.1;
+  zoom = Math.max(0.2, Math.min(4.0, zoom + factor));
+  e.preventDefault();
+}, {passive: false});
+
+// ── TOUCH / PINCH-TO-ZOOM ─────────────────────────────────
+let touchStartDist = 0, touchStartZoom = 1.0;
+let touchDragStart = null;
+mc.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    touchStartDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY);
+    touchStartZoom = zoom;
+  } else if (e.touches.length === 1) {
+    touchDragStart = {x: e.touches[0].clientX + camX, y: e.touches[0].clientY + camY};
+    document.getElementById('followLeader').checked = false;
+  }
+  e.preventDefault();
+}, {passive: false});
+mc.addEventListener('touchmove', e => {
+  if (e.touches.length === 2) {
+    const d = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY);
+    zoom = Math.max(0.2, Math.min(4.0, touchStartZoom * (d / touchStartDist)));
+  } else if (e.touches.length === 1 && touchDragStart) {
+    camX = touchDragStart.x - e.touches[0].clientX;
+    camY = touchDragStart.y - e.touches[0].clientY;
+  }
+  e.preventDefault();
+}, {passive: false});
+mc.addEventListener('touchend', () => { touchDragStart = null; });
+
+// ── KEYBOARD SHORTCUTS ─────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  const PAN = 40;
+  switch(e.key) {
+    case '+': case '=': zoomIn(); break;
+    case '-': case '_': zoomOut(); break;
+    case 'f': case 'F': viewAll(); break;
+    case 'r': case 'R': resetCam(); break;
+    case 'ArrowLeft':  camX -= PAN; e.preventDefault(); break;
+    case 'ArrowRight': camX += PAN; e.preventDefault(); break;
+    case 'ArrowUp':    camY -= PAN; e.preventDefault(); break;
+    case 'ArrowDown':  camY += PAN; e.preventDefault(); break;
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+// CANVAS RESIZE
+// ════════════════════════════════════════════════════════════
+let showST = true;
+
+function resizeCanvas() {
+  const wrap = mc.parentElement;   // .canvas-area
+  const stH  = showST ? 130 : 0;
+  mc.width   = wrap.clientWidth;
+  mc.height  = Math.max(200, wrap.clientHeight - stH);
+  dbg('Canvas resized:', mc.width + 'x' + mc.height);
+}
+function resizeST() {
+  stc.width  = stc.parentElement.clientWidth;
+  stc.height = 130;
+}
+
+window.addEventListener('resize', () => { resizeCanvas(); resizeST(); });
+
+document.getElementById('showST').addEventListener('change', e => {
+  showST = e.target.checked;
+  document.getElementById('stWrap').style.height = showST ? '130px' : '0px';
+  setTimeout(resizeCanvas, 310);
+});
+
+// ════════════════════════════════════════════════════════════
+// COLOUR HELPERS
+// ════════════════════════════════════════════════════════════
+const PALETTE = ['#00ffff','#38b2ac','#f6ad55','#fc8181','#68d391','#9f7aea','#ffd700','#a0b4ff'];
+
+function vehicleColor(v, AR) {
+  if (v.collided)  return '#f56565';
+  if (v.is_leader) return '#00ffff';
+  const ar = AR?.[v.id];
+  if (ar == null) {
+    return {CACC:'#38b2ac',DEGRADED:'#f6ad55',ACC:'#9f7aea',EMERGENCY:'#f56565'}[v.fsm_state||'CACC'] || '#38b2ac';
+  }
+  return ar < 1.0 ? '#38b2ac' : ar < 1.2 ? '#f6ad55' : '#f56565';
+}
+
+// ════════════════════════════════════════════════════════════
+// SIMULATION STATE
+// ════════════════════════════════════════════════════════════
+let lastState  = null;
+let frameCount = 0;
+const ST_HIST  = 400;
+let stData     = {};
+
+// ════════════════════════════════════════════════════════════
+// GAME LOOP — update() then render() every frame
+// ════════════════════════════════════════════════════════════
+function update() {
+  if (!lastState) return;
+  const leader = lastState.vehicles.find(v => v.is_leader && v.platoon_id === 0);
+  if (!leader || isNaN(leader.position)) return;
+
+  if (document.getElementById('followLeader').checked) {
+    // BUG-2 FIX: formula was inverted (P*MSCALE*zoom - H/2 → wrong sign)
+    const targY = camYForPosition(leader.position);
+    if (!cameraInitialized) {
+      camY = targY;                 // SNAP — no easing on first frame
+      cameraInitialized = true;
+      dbg('Camera SNAPPED  leader.pos=' + leader.position.toFixed(1) + 'm  camY=' + camY.toFixed(1));
+    } else {
+      camY += (targY - camY) * 0.06;   // smooth follow
+    }
+  }
+}
+
+function render() {
+  frameCount++;
+  if (frameCount % 60 === 0) {
+    dbg('Frame', frameCount, '| canvas', mc.width+'x'+mc.height, '| camY', camY.toFixed(1), '| zoom', zoom.toFixed(2), '| state', lastState ? 'OK' : 'null');
+    if (lastState) dbg('Vehicles:', lastState.vehicles.map(v => 'V'+v.id+':'+v.position.toFixed(0)+'m').join(', '));
+  }
+
+  if (!lastState) { renderWaitScreen(); return; }
+  renderScene(lastState);
+  renderSpaceTime();
+
+  // On-screen debug overlay
+  if (document.getElementById('showDebug').checked && lastState) {
+    const ldr = lastState.vehicles.find(v => v.is_leader);
+    document.getElementById('dbgContent').innerHTML =
+      'Frame: ' + frameCount + '<br>' +
+      'Canvas: ' + mc.width + 'x' + mc.height + '<br>' +
+      'camY: ' + camY.toFixed(1) + '  camX: ' + camX.toFixed(1) + '<br>' +
+      'zoom: ' + zoom.toFixed(2) + '<br>' +
+      'Leader pos: ' + (ldr ? ldr.position.toFixed(1)+'m' : 'N/A') + '<br>' +
+      'Vehicles: ' + lastState.vehicles.length + '<br>' +
+      'Sim time: ' + lastState.time.toFixed(2) + 's';
+  }
+}
+
+function gameLoop() {
+  update();
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// ════════════════════════════════════════════════════════════
+// ANTI-GRAVITY STAR FIELD
+// ════════════════════════════════════════════════════════════
+const _stars = Array.from({length:120},()=>({x:Math.random(),y:Math.random(),s:Math.random()*1.8+.3,a:Math.random()}));
+function drawStarField(W,H){
+  const t=Date.now()*.0003;
+  _stars.forEach(st=>{
+    const flicker=.4+.6*Math.sin(t*3+st.a*20);
+    ctx.fillStyle=`rgba(140,180,255,${flicker*.35})`;
+    ctx.beginPath();ctx.arc(st.x*W,st.y*H,st.s,0,Math.PI*2);ctx.fill();
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// RENDER — WAIT SCREEN (Anti-Gravity)
+// ════════════════════════════════════════════════════════════
+function renderWaitScreen() {
+  const W = mc.width, H = mc.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#060612'; ctx.fillRect(0,0,W,H);
+  drawStarField(W,H);
+  // Floating grid
+  const t=Date.now()*.001;
+  ctx.strokeStyle='rgba(0,240,255,.04)'; ctx.lineWidth=1;
+  for(let gy=-50;gy<H+50;gy+=40){
+    const off=Math.sin(t+gy*.01)*8;
+    ctx.beginPath();ctx.moveTo(0,gy+off);ctx.lineTo(W,gy+off);ctx.stroke();
+  }
+  // Pulsing orb
+  const pulse=.5+.5*Math.sin(t*2);
+  const grd=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,120);
+  grd.addColorStop(0,`rgba(0,240,255,${.08*pulse})`);
+  grd.addColorStop(1,'transparent');
+  ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);
+  // Title
+  ctx.fillStyle=`rgba(0,240,255,${.6+.4*pulse})`;
+  ctx.font='700 15px Orbitron,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.shadowColor='#00f0ff';ctx.shadowBlur=20;
+  ctx.fillText('▶  PRESS START TO LAUNCH SIMULATION',W/2,H/2-8);
+  ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(107,127,163,.6)';ctx.font='500 12px Rajdhani,sans-serif';
+  ctx.fillText('Anti-Gravity V2V Platooning Simulator',W/2,H/2+16);
+}
+
+// ════════════════════════════════════════════════════════════
+// RENDER — MAIN SCENE
+// ════════════════════════════════════════════════════════════
+function renderScene(state) {
+  const W = mc.width, H = mc.height;
+  if (!W || !H) { dbgW('Canvas has zero dimensions'); return; }
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#060612'; ctx.fillRect(0,0,W,H);
+  drawStarField(W,H);
+
+  ctx.save();
+  ctx.translate(W/2 - camX, H - camY);
+  ctx.scale(1, zoom);
+
+  // Road surface — multi-lane
+  const numP   = Math.max(2, lastState ? (new Set(lastState.vehicles.map(v=>v.platoon_id).filter(p=>p>=0))).size : 2);
+  const LANE_W = 150;
+  const SHOULDER= 50;
+  const rW     = numP * LANE_W + SHOULDER * 2;
+  const rX     = -rW / 2;
+
+  // Aspal with subtle gradient
+  const roadGrd=ctx.createLinearGradient(rX,0,rX+rW,0);
+  roadGrd.addColorStop(0,'#0a0c16');roadGrd.addColorStop(.5,'#0f1220');roadGrd.addColorStop(1,'#0a0c16');
+  ctx.fillStyle=roadGrd; ctx.fillRect(rX,-50000,rW,100000);
+
+  // Neon edge glow
+  ctx.shadowColor='#00f0ff';ctx.shadowBlur=8;
+  ctx.strokeStyle='rgba(0,240,255,.3)'; ctx.lineWidth=1.5; ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(rX + SHOULDER,-50000); ctx.lineTo(rX + SHOULDER, 50000);
+  ctx.moveTo(rX + rW - SHOULDER,-50000); ctx.lineTo(rX + rW - SHOULDER, 50000);
+  ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // Bahu jalan
+  ctx.fillStyle = 'rgba(0,240,255,.02)';
+  ctx.fillRect(rX, -50000, SHOULDER, 100000);
+  ctx.fillRect(rX + rW - SHOULDER, -50000, SHOULDER, 100000);
+
+  // Garis lajur tengah — neon dashes
+  ctx.strokeStyle='rgba(0,240,255,.12)'; ctx.lineWidth=1; ctx.setLineDash([16,16]);
+  for (let li = 1; li < numP; li++) {
+    const lx = rX + SHOULDER + li * LANE_W;
+    ctx.beginPath(); ctx.moveTo(lx,-50000); ctx.lineTo(lx,50000); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Label lajur — Orbitron font
+  for (let li = 0; li < numP; li++) {
+    const lx = rX + SHOULDER + li * LANE_W + LANE_W/2;
+    ctx.fillStyle = 'rgba(0,240,255,.06)';
+    ctx.font = '900 20px Orbitron,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('P' + li, lx, 0);
+  }
+
+  const AR = state.amplitude_ratios || {};
+  const sv = state.vehicles.slice().sort((a,b) => b.position - a.position);
+
+  // Helper: hitung X tengah lajur berdasarkan platoon_id
+  // Filter platoon_id=-1 (IN_TRANSIT limbo) agar tidak mengacaukan urutan lajur
+  const platoonIds = [...new Set(state.vehicles.map(v=>v.platoon_id).filter(p=>p>=0))].sort();
+  function laneX(pid) {
+    const idx = platoonIds.indexOf(pid);
+    const nP  = Math.max(2, platoonIds.length);
+    const LANE_W = 150, SHOULDER = 50;
+    const rW = nP * LANE_W + SHOULDER * 2;
+    return -rW/2 + SHOULDER + idx * LANE_W + LANE_W / 2;
+  }
+
+  // V2V links — dalam lajur masing-masing platoon
+  // BUG-FIX: filter dulu kendaraan IN_TRANSIT (platoon_id < 0) agar link
+  // kendaraan belakang tidak terputus saat ada kendaraan IN_TRANSIT di tengah barisan.
+  const svLinked = sv.filter(v => v.platoon_id >= 0);
+  for (let i = 1; i < svLinked.length; i++) {
+    const f = svLinked[i], p = svLinked[i-1];
+    if (f.platoon_id !== p.platoon_id) continue;
+    const py = -p.position*MSCALE, fy = -f.position*MSCALE;
+    const lx = laneX(f.platoon_id) + 8;
+    const aoi = f.aoi_ms||0;
+    const lc = f.communication_ok
+      ? (aoi<50?'rgba(0,240,255,.5)':aoi<100?'rgba(255,179,0,.5)':'rgba(255,51,85,.4)')
+      : 'rgba(255,51,85,.15)';
+    ctx.shadowColor=f.communication_ok?'#00f0ff':'#ff3355';ctx.shadowBlur=f.communication_ok?6:0;
+    ctx.strokeStyle=lc; ctx.lineWidth=1; ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(lx,fy); ctx.lineTo(lx,py); ctx.stroke(); ctx.setLineDash([]);
+    ctx.shadowBlur=0;
+    if (f.communication_ok && Math.random()<0.06) {
+      const dot = fy + (py-fy)*((Date.now()%700)/700);
+      ctx.fillStyle=lc; ctx.beginPath(); ctx.arc(lx,dot,3,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // Draw each vehicle (positioned in their platoon lane, or animated if in transit)
+  // v7: multi-phase rendering — DEPARTING | IN_TRANSIT | normal
+  state.vehicles.forEach(v => {
+    if (isNaN(v.position)) { dbgW('V'+v.id+' NaN position'); return; }
+    const vy     = -v.position * MSCALE;
+    const mPhase = v.maneuver_phase;   // 'DEPARTING' | 'IN_TRANSIT' | null
+
+    // ── v7: COMPUTE vx (X position on canvas) ─────────────────────────────
+    let vx = 0;
+    let inTransit    = false;   // animasi perpindahan lajur (legacy + IN_TRANSIT)
+    let isDeparting  = false;
+
+    if (mPhase === 'DEPARTING') {
+      // Fase 2: Masih di platoon sumber secara fisika, tampilkan dengan outline berbeda
+      vx = laneX(v.platoon_id);
+      isDeparting = true;
+      // Gambar panah menuju platoon tujuan
+      if (v.transit_target_pid !== null && v.transit_target_pid !== undefined) {
+        const targetX = laneX(v.transit_target_pid);
+        const srcX    = vx;
+        if (Math.abs(targetX - srcX) > 5) {
+          const pulse = 0.4 + 0.3 * Math.sin(Date.now() / 250);
+          ctx.save();
+          ctx.globalAlpha = pulse;
+          ctx.strokeStyle = '#f6ad55';
+          ctx.lineWidth   = 2 / zoom;
+          ctx.setLineDash([5 / zoom, 8 / zoom]);
+          ctx.beginPath();
+          ctx.moveTo(srcX, vy);
+          const mx = (srcX + targetX) / 2;
+          ctx.quadraticCurveTo(mx, vy + 60 / zoom, targetX, vy);
+          ctx.stroke();
+          // Arrowhead
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#f6ad55';
+          const dir = Math.sign(targetX - srcX);
+          ctx.beginPath();
+          ctx.moveTo(targetX,              vy);
+          ctx.lineTo(targetX - dir*10/zoom, vy - 6/zoom);
+          ctx.lineTo(targetX - dir*10/zoom, vy + 6/zoom);
+          ctx.closePath(); ctx.fill();
+          ctx.globalAlpha = 1.0;
+          ctx.restore();
+        }
+      }
+
+    } else if (mPhase === 'IN_TRANSIT') {
+      // Fase 3: platoon_id = -1 (limbo). Animasi X dari src lane ke target lane.
+      inTransit = true;
+      const srcPid    = v.transit_src_pid;
+      const targetPid = v.transit_target_pid;
+      const srcX   = (srcPid    !== null && srcPid    !== undefined) ? laneX(srcPid)    : 0;
+      const destX2 = (targetPid !== null && targetPid !== undefined) ? laneX(targetPid) : 0;
+
+      // Track waktu mulai IN_TRANSIT di frontend
+      if (!inTransitState[v.id]) {
+        inTransitState[v.id] = { srcX, destX: destX2, startTime: Date.now(), duration: 3000 };
+      }
+      const its = inTransitState[v.id];
+      // Update destX kalau lane bergeser
+      its.destX = destX2;
+      const elapsed = Math.min(1.0, (Date.now() - its.startTime) / its.duration);
+      // Ease-in-out
+      const t = elapsed < 0.5 ? 4*elapsed*elapsed*elapsed : 1 - Math.pow(-2*elapsed+2,3)/2;
+      vx = its.srcX + (its.destX - its.srcX) * t;
+
+      // Gambar jalur lengkung antar lajur
+      if (Math.abs(its.srcX - its.destX) > 5) {
+        ctx.save();
+        ctx.globalAlpha = 0.55 * (1 - elapsed * 0.5);
+        ctx.strokeStyle = '#00bcd4';
+        ctx.lineWidth   = 2 / zoom;
+        ctx.setLineDash([6 / zoom, 8 / zoom]);
+        ctx.beginPath();
+        ctx.moveTo(its.srcX, vy + 40 / zoom);
+        const mx2 = (its.srcX + its.destX) / 2;
+        ctx.quadraticCurveTo(mx2, vy + 80 / zoom, its.destX, vy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1.0;
+        ctx.restore();
+      }
+
+    } else {
+      // Normal atau STABILIZING — gunakan animasi lajur yang sudah ada
+      inTransitState[v.id] && delete inTransitState[v.id];   // bersihkan state IN_TRANSIT
+      const destX = laneX(v.platoon_id);
+      vx = destX;
+      const tr = activeTransitions[v.id];
+      if (tr) {
+        const elapsed = (Date.now() - tr.startTime) / tr.duration;
+        if (elapsed >= 1.0) {
+          delete activeTransitions[v.id];
+        } else {
+          const t = elapsed < 0.5
+            ? 4 * elapsed * elapsed * elapsed
+            : 1 - Math.pow(-2 * elapsed + 2, 3) / 2;
+          tr.toX = destX;
+          vx = tr.fromX + (tr.toX - tr.fromX) * t;
+          inTransit = true;
+
+          if (Math.abs(tr.fromX - destX) > 5) {
+            ctx.save();
+            ctx.globalAlpha = 0.40 * (1 - elapsed);
+            ctx.strokeStyle = '#00bcd4';
+            ctx.lineWidth = 2 / zoom;
+            ctx.setLineDash([6 / zoom, 8 / zoom]);
+            ctx.beginPath();
+            ctx.moveTo(tr.fromX, vy);
+            const mx = (tr.fromX + destX) / 2;
+            const my = vy + 80 / zoom;
+            ctx.quadraticCurveTo(mx, my, destX, vy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1.0;
+            ctx.restore();
+          }
+        }
+      }
+    }
+    // ── akhir perhitungan vx ──────────────────────────────────────────────
+
+    const vColor = vehicleColor(v, AR);
+    const cL=20, cW=14;
+
+    ctx.save();
+    ctx.translate(vx, 0);
+
+    // ── v7: Visual style per fase manuver ────────────────────────────────
+    if (mPhase === 'IN_TRANSIT') {
+      // Cyan glow: kendaraan sedang dalam perjalanan antar platoon
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur  = 22 / zoom;
+    } else if (isDeparting) {
+      // Orange glow: kendaraan sedang bersiap meninggalkan platoon
+      ctx.shadowColor = '#f6ad55';
+      ctx.shadowBlur  = 14 / zoom;
+    } else if (inTransit) {
+      ctx.shadowColor = '#00bcd4';
+      ctx.shadowBlur  = 18 / zoom;
+    }
+
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(-cW/2-2, vy-cL/2-2, cW+4, cL+4);
+    // Body
+    ctx.fillStyle = mPhase === 'IN_TRANSIT' ? '#00e5ff'
+                  : isDeparting             ? '#f6ad55'
+                  : vColor;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(-cW/2,vy-cL/2,cW,cL,3) : ctx.rect(-cW/2,vy-cL/2,cW,cL);
+    ctx.fill();
+
+    // Outline — dashed untuk DEPARTING/IN_TRANSIT, solid untuk normal
+    if (mPhase === 'IN_TRANSIT' || isDeparting) {
+      ctx.save();
+      ctx.setLineDash([3 / zoom, 3 / zoom]);
+      ctx.strokeStyle = mPhase === 'IN_TRANSIT' ? '#ffffff' : '#ff8c00';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    } else {
+      ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1; ctx.stroke();
+    }
+    // Leader glow
+    if (v.is_leader && !mPhase) { ctx.shadowColor=vColor; ctx.shadowBlur=14; ctx.fill(); }
+    ctx.shadowBlur = 0;
+    // Collision X
+    if (v.collided) {
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(-cW/2,vy-cL/2); ctx.lineTo(cW/2,vy+cL/2);
+      ctx.moveTo(cW/2,vy-cL/2); ctx.lineTo(-cW/2,vy+cL/2); ctx.stroke();
+    }
+
+    // Labels — counter-scale so text is always readable regardless of zoom
+    const s1 = 1/zoom;
+    ctx.save(); ctx.scale(s1, s1);
+    const VY = vy * zoom;
+    ctx.fillStyle='#e8ecf4'; ctx.font='700 10px Orbitron,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('V'+v.id, 0, VY - cL*zoom/2 - 6);
+    if (v.is_leader && !mPhase) { ctx.fillStyle='#ffd700'; ctx.fillText('\u{1F451}', (cW/2+12)*zoom, VY-cL*zoom/2-4); }
+
+    // Fase ikon
+    if (mPhase === 'IN_TRANSIT') {
+      ctx.fillStyle='#00f0ff'; ctx.fillText('✈', -(cW/2+14)*zoom, VY-cL*zoom/2-4);
+    } else if (isDeparting) {
+      ctx.fillStyle='#ffb300'; ctx.fillText('↗', -(cW/2+14)*zoom, VY-cL*zoom/2-4);
+    } else if (inTransit) {
+      ctx.fillStyle='#00f0ff'; ctx.fillText('\u2708', -(cW/2+14)*zoom, VY-cL*zoom/2-4);
+    }
+
+    // FSM label — neon colors
+    const fsm = v.fsm_state || v.control_mode || 'CACC';
+    const fsmC = {CACC:'#00f0ff',DEGRADED:'#ffb300',ACC:'#a855f7',
+                  EMERGENCY:'#ff3355',LEADER:'#00f0ff',TRANSFER:'#ffb300',
+                  DEPARTING:'#ffb300',IN_TRANSIT:'#00f0ff'};
+    ctx.fillStyle = fsmC[mPhase] || fsmC[fsm] || '#00f0ff';
+    ctx.font='700 8px JetBrains Mono,monospace';
+    const fsmLabel = mPhase === 'DEPARTING' ? 'DEPART'
+                   : mPhase === 'IN_TRANSIT' ? 'TRANSIT'
+                   : inTransit ? 'TRANSIT'
+                   : fsm;
+    ctx.fillText(fsmLabel, 0, VY + cL*zoom/2 + 12);
+
+    if (!v.is_leader) {
+      const se = v.spacing_error||0;
+      ctx.fillStyle=Math.abs(se)>5?'#ff3355':Math.abs(se)>2?'#ffb300':'#6b7fa3';
+      ctx.font='700 7px JetBrains Mono,monospace'; ctx.fillText('\u0394:'+se.toFixed(1)+'m', 0, VY+cL*zoom/2+22);
+      const aoi=v.aoi_ms||0, barW=40*zoom, barH=3*zoom;
+      const barTop = VY - cL*zoom/2 - 10*zoom;
+      ctx.fillStyle='rgba(255,255,255,.05)'; ctx.fillRect(-barW/2, barTop, barW, barH);
+      const fillW = Math.min(1, aoi/600)*barW;
+      ctx.fillStyle=aoi<100?'#00f0ff':aoi<500?'#ffb300':'#ff3355';
+      ctx.fillRect(-barW/2, barTop, fillW, barH);
+    }
+    ctx.restore(); // inner scale
+    ctx.restore(); // translate vx
+  });
+
+  ctx.restore();
+}
+
+// ════════════════════════════════════════════════════════════
+// RENDER — SPACE-TIME DIAGRAM
+// ════════════════════════════════════════════════════════════
+function renderSpaceTime() {
+  if (!showST || !lastState) return;
+  const W=stc.width, H=stc.height;
+  if (!W || !H) return;
+  stCtx.fillStyle='#060612'; stCtx.fillRect(0,0,W,H);
+  stCtx.fillStyle='rgba(0,240,255,.06)'; stCtx.fillRect(0,0,W,18);
+  stCtx.fillStyle='#6b7fa3'; stCtx.font='600 9px Rajdhani,sans-serif'; stCtx.textAlign='left';
+  stCtx.fillText('SPACE-TIME DIAGRAM',6,13);
+  const ids = [...new Set(Object.keys(stData).map(Number))];
+  if (!ids.length) return;
+  const allT=[],allP=[]; ids.forEach(id=>{ stData[id]?.forEach(p=>{allT.push(p.t);allP.push(p.y);}); });
+  if (!allT.length) return;
+  const tMin=Math.min(...allT),tMax=Math.max(...allT)||tMin+1;
+  const pMin=Math.min(...allP),pMax=Math.max(...allP)||pMin+1;
+  const tS=tMax-tMin||1, pS=pMax-pMin||1;
+  ids.forEach((id,i)=>{
+    const pts=stData[id]||[];
+    if (pts.length<2) return;
+    stCtx.strokeStyle=PALETTE[i%PALETTE.length]; stCtx.lineWidth=1.5;
+    stCtx.beginPath();
+    pts.forEach((p,k)=>{
+      const x=22+(p.t-tMin)/tS*(W-30), y=22+(1-(p.y-pMin)/pS)*(H-30);
+      k===0?stCtx.moveTo(x,y):stCtx.lineTo(x,y);
+    }); stCtx.stroke();
+    const last=pts[pts.length-1];
+    const lx=22+(last.t-tMin)/tS*(W-30), ly=22+(1-(last.y-pMin)/pS)*(H-30);
+    stCtx.fillStyle=PALETTE[i%PALETTE.length]; stCtx.font='8px Arial'; stCtx.textAlign='left';
+    stCtx.fillText('V'+id, Math.min(lx,W-20), Math.max(ly,12));
+  });
+  stCtx.strokeStyle='rgba(0,240,255,.15)'; stCtx.lineWidth=1;
+  stCtx.beginPath(); stCtx.moveTo(22,20); stCtx.lineTo(22,H-8); stCtx.lineTo(W-8,H-8); stCtx.stroke();
+  stCtx.fillStyle='#6b7fa3'; stCtx.font='600 8px Rajdhani,sans-serif';
+  stCtx.textAlign='left';  stCtx.fillText(tMin.toFixed(0)+'s',24,H-1);
+  stCtx.textAlign='right'; stCtx.fillText(tMax.toFixed(0)+'s',W-8,H-1);
+  stCtx.save(); stCtx.rotate(-Math.PI/2); stCtx.fillText('pos(m)',-H/2,12); stCtx.restore();
+}
+
+// ════════════════════════════════════════════════════════════
+// PANEL UI UPDATE
+// ════════════════════════════════════════════════════════════
+let latencyHistory=[], latencyMiniChart=null;
+
+function updatePanel(state) {
+  const AR=state.amplitude_ratios||{}, net=state.network;
+  const maxAoI=state.max_aoi_ms||0, si=state.stability_index, ss=state.stability_status;
+  const siC=si>0.8?'#00ff88':si>0.5?'#ffb300':'#ff3355';
+  document.getElementById('siOverlay').innerHTML=`SI: <span style="color:${siC}">${si.toFixed(2)} — ${ss}</span>`;
+  document.getElementById('aoidOverlay').innerHTML=`Max AoI: <span style="color:${maxAoI<100?'#00ff88':maxAoI<500?'#f6ad55':'#f56565'}">${maxAoI.toFixed(0)}ms</span>`;
+  document.getElementById('pdrOverlay').innerHTML=`PDR: <span style="color:${net.pdr>95?'#00ff88':net.pdr>90?'#f6ad55':'#f56565'}">${net.pdr.toFixed(1)}%</span>`;
+  document.getElementById('topologyOverlay').textContent='Topology: '+(cfg.topology||'predecessor');
+  document.getElementById('kSI').textContent=si.toFixed(2); document.getElementById('kSI').style.color=siC;
+  document.getElementById('kAoI').textContent=maxAoI.toFixed(0)+'ms'; document.getElementById('kAoI').style.color=maxAoI<100?'#00ff88':maxAoI<500?'#f6ad55':'#f56565';
+  document.getElementById('kPDR').textContent=net.pdr.toFixed(1)+'%';
+  const modes=[...new Set(state.vehicles.filter(v=>!v.is_leader).map(v=>v.fsm_state||'CACC'))];
+  const dom=modes.includes('EMERGENCY')?'EMRG':modes.includes('ACC')?'ACC':modes.includes('DEGRADED')?'DEG':'CACC';
+  document.getElementById('kMode').textContent=dom;
+  document.getElementById('kMode').style.color={EMRG:'#f56565',ACC:'#9f7aea',DEG:'#f6ad55',CACC:'#38b2ac'}[dom];
+  document.getElementById('vehicleCards').innerHTML=state.vehicles.map(v=>{
+    const fsm=v.fsm_state||'CACC';
+    const cls=v.collided?'collided':fsm==='TRANSFER'?'transfer-mode':fsm==='DEGRADED'?'degraded':fsm==='ACC'?'acc-mode':fsm==='EMERGENCY'?'emergency':'';
+    const ar=AR[v.id], arStr=ar!=null?ar.toFixed(2):'N/A', arC=ar==null?'#718096':ar<1?'#38b2ac':ar<1.2?'#f6ad55':'#f56565';
+    const aoi=v.aoi_ms||0, aoiC=aoi<100?'#38b2ac':aoi<500?'#f6ad55':'#f56565';
+    const se=v.spacing_error||0, seC=Math.abs(se)>5?'#f56565':Math.abs(se)>2?'#f6ad55':'#e2e8f0';
+    const cdl=v.transfer_cooldown||0;
+    return `<div class="veh-card ${cls}">
+      <div class="veh-head">
+        <span class="veh-id">${v.is_leader?'👑':''} V${v.id}${v.is_leader?' (Leader)':''} <span style="font-size:.65rem;color:#718096">P${v.platoon_id}</span></span>
+        <span class="fsm-badge fsm-${fsm}">${fsm}</span>
+      </div>
+      ${cdl>0?`<div class="cooldown-bar"><div class="cooldown-fill" style="width:${Math.min(100,cdl/2*100)}%" title="Cooldown: ${cdl.toFixed(1)}s tersisa"></div></div><div style="font-size:.6rem;color:#00bcd4;text-align:center;margin-bottom:2px">⏱ Cooldown ${cdl.toFixed(1)}s (h=1.5×normal)</div>`:''}
+      <div class="veh-metrics">
+        <div class="vm"><div class="vm-label">Speed km/h</div><div class="vm-val">${v.velocity_kmh.toFixed(1)}</div></div>
+        <div class="vm"><div class="vm-label">a_actual</div><div class="vm-val">${(v.a_actual||0).toFixed(2)}</div></div>
+        <div class="vm"><div class="vm-label">AR</div><div class="vm-val" style="color:${arC}">${arStr}</div></div>
+        ${!v.is_leader?`<div class="vm"><div class="vm-label">Δpos (m)</div><div class="vm-val" style="color:${seC}">${se.toFixed(2)}</div></div>
+        <div class="vm"><div class="vm-label">Integral</div><div class="vm-val" style="color:#a0aec0">${(v.integral_e||0).toFixed(3)}</div></div>
+        <div class="vm"><div class="vm-label">τact lag</div><div class="vm-val">${((v.a_actual||0)-(v.a_desired||0)).toFixed(2)}</div></div>`:''}
+      </div>
+      ${!v.is_leader?`<div class="aoi-row"><span class="aoi-label">AoI</span><div class="aoi-bar-bg"><div class="aoi-bar-fill" style="width:${Math.min(100,aoi/600*100)}%;background:${aoiC}"></div></div><span class="aoi-val" style="color:${aoiC}">${aoi.toFixed(0)}ms</span></div>`:''}
+    </div>`;
+  }).join('');
+  const comp=net.delay_components||{};
+  document.getElementById('netMetrics').innerHTML=`
+    <div class="net-row"><span class="net-key">Avg Latency</span><span class="net-val" style="color:${net.avg_delay<20?'#00ff88':net.avg_delay<50?'#f6ad55':'#f56565'}">${net.avg_delay} ms</span></div>
+    <div class="net-row"><span class="net-key">Security Delay (ECDSA)</span><span class="net-val" style="color:#9f7aea">${net.security_delay_ms} ms ±${net.security_delay_std}ms</span></div>
+    <div class="net-row"><span class="net-key">PDR</span><span class="net-val">${net.pdr}%</span></div>
+    <div class="net-row"><span class="net-key">Pkts Sent/Rcvd/Lost</span><span class="net-val" style="font-size:.72rem">${net.packets_sent}/${net.packets_received}/${net.packets_lost}</span></div>
+    <div class="net-row"><span class="net-key">Slice</span><span class="net-val">${net.network_slicing}</span></div>
+    <div class="net-row"><span class="net-key">RSU</span><span class="net-val" style="color:${net.rsu_enabled?'#38b2ac':'#f56565'}">${net.rsu_enabled?'ON':'OFF'}</span></div>
+    <div class="net-row"><span class="net-key">Status</span><span class="net-val" style="color:${net.degraded?'#f56565':'#00ff88'}">${net.degraded?'⚠ DEGRADED':'✓ NORMAL'}</span></div>`;
+  const totD=(comp.network||net.avg_delay)+(comp.security||3), nPct=totD>0?(comp.network||net.avg_delay)/totD*100:50;
+  document.getElementById('delayBreakdown').innerHTML=`
+    <div class="delay-bar"><div class="db-net" style="width:${nPct.toFixed(0)}%"></div><div class="db-sec" style="width:${(100-nPct).toFixed(0)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:.7rem">
+      <span style="color:#38b2ac">📡 Net: ${(comp.network||net.avg_delay).toFixed(1)}ms</span>
+      <span style="color:#9f7aea">🔐 ECDSA: ${(comp.security||3).toFixed(1)}ms</span>
+    </div>`;
+  const ll=net.link_latency||{};
+  document.getElementById('perLinkLatency').innerHTML=Object.keys(ll).length
+    ?Object.entries(ll).map(([k,v])=>`<div class="net-row"><span class="net-key">V${k} link</span><span class="net-val" style="color:${v<20?'#38b2ac':v<50?'#f6ad55':'#f56565'}">${v} ms</span></div>`).join('')
+    :'<div style="color:#718096;font-size:.78rem">No link data yet.</div>';
+  latencyHistory.push(net.avg_delay);
+  if (latencyHistory.length>80) latencyHistory.shift();
+  if (latencyMiniChart) {
+    latencyMiniChart.data.labels=latencyHistory.map((_,i)=>i);
+    latencyMiniChart.data.datasets[0].data=latencyHistory;
+    latencyMiniChart.update('none');
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// TAB SWITCH — BUG-5 FIX: explicit event parameter
+// ════════════════════════════════════════════════════════════
+function showPTab(ev, id) {
+  document.querySelectorAll('.ptab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  ev.currentTarget.classList.add('active');
+}
+
+function logEvent(msg, color='#a0aec0') {
+  dbg('Event:', msg);
+  const log=document.getElementById('eventLog');
+  const e=document.createElement('div');
+  e.style.cssText=`padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05);color:${color}`;
+  e.textContent=msg; log.prepend(e);
+  while (log.children.length>30) log.removeChild(log.lastChild);
+}
+
+// ════════════════════════════════════════════════════════════
+// SOCKET HANDLERS
+// ════════════════════════════════════════════════════════════
+socket.on('connect',        ()  => {
+  dbg('Socket connected'); logEvent('🟢 Connected to server','#00ff88');
+  // AUTO-START: jika config datang dari halaman Configure, langsung mulai simulasi
+  if (sessionStorage.getItem('simulationConfig')) {
+    dbg('Auto-starting simulation from sessionStorage config');
+    setTimeout(() => {
+      socket.emit('start_simulation', {config: cfg});
+      sessionStorage.removeItem('simulationConfig'); // hapus agar refresh tidak re-trigger
+    }, 300);
+  }
+});
+socket.on('disconnect',     (r) => { dbgW('Disconnected:',r); logEvent('🔴 Disconnected: '+r,'#f56565'); });
+socket.on('connect_error',  (e) => { dbgW('Connect error:',e.message); logEvent('⚠ Connect error: '+e.message,'#f6ad55'); });
+
+socket.on('simulation_started', d => {
+  dbg('Simulation started:', d);
+  document.getElementById('startBtn').style.display='none';
+  document.getElementById('stopBtn').style.display='inline-block';
+  logEvent('▶ Simulation started','#00ff88');
+  cameraInitialized=false; stData={}; latencyHistory=[];
+});
+
+socket.on('simulation_stopped', d => {
+  dbg('Simulation stopped:', d);
+  document.getElementById('startBtn').style.display='inline-block';
+  document.getElementById('stopBtn').style.display='none';
+  logEvent('■ Stopped — '+d.experiment_id,'#f6ad55');
+  setTimeout(()=>window.location.href='/analysis',1200);
+});
+
+socket.on('disturbance_injected', d => { dbg('Disturbance:',d.type); logEvent('⚡ Disturbance: '+d.type,'#f6ad55'); });
+
+socket.on('state_update', state => {
+  if (!state || !Array.isArray(state.vehicles) || !state.vehicles.length) {
+    dbgW('Invalid state_update payload:', state); return;
+  }
+
+  // ── DETECT PLATOON CHANGES → start lane-change animation ──
+  // Build current laneX mapping from the new state BEFORE updating lastState
+  const newPids = [...new Set(state.vehicles.map(v=>v.platoon_id).filter(p=>p>=0))].sort();
+  function newLaneX(pid) {
+    const idx = newPids.indexOf(pid);
+    const nP  = Math.max(2, newPids.length);
+    const LW  = 150, SH = 50;
+    const rW  = nP * LW + SH * 2;
+    return -rW/2 + SH + idx * LW + LW / 2;
+  }
+  state.vehicles.forEach(v => {
+    const prev = prevPlatoonIds[v.id];
+    // v7: Jangan trigger animasi kalau tujuan adalah platoon -1 (limbo IN_TRANSIT)
+    // atau sumber adalah platoon -1.  Transisi -1→target sudah dihandle inTransitState.
+    if (prev !== undefined && prev !== v.platoon_id
+        && v.platoon_id !== -1 && prev !== -1) {
+      // Vehicle just changed platoon — start animation from old lane to new lane
+      const fromX = newLaneX(prev);   // old lane centre (may not exist anymore → fallback)
+      const toX   = newLaneX(v.platoon_id);
+      if (!activeTransitions[v.id]) {
+        activeTransitions[v.id] = {
+          fromX,
+          toX,
+          startTime: Date.now(),
+          duration:  1400,   // 1.4 seconds animation
+        };
+        dbg(`Transition started V${v.id}: P${prev}→P${v.platoon_id} fromX=${fromX.toFixed(0)} toX=${toX.toFixed(0)}`);
+      }
+    }
+    prevPlatoonIds[v.id] = v.platoon_id;
+  });
+  // ──────────────────────────────────────────────────────────
+
+  lastState = state;
+  document.getElementById('simTime').textContent = state.time.toFixed(1)+'s';
+  state.vehicles.forEach(v => {
+    if (isNaN(v.position)) return;
+    if (!stData[v.id]) stData[v.id]=[];
+    stData[v.id].push({t:state.time, y:v.position});
+    if (stData[v.id].length>ST_HIST) stData[v.id].shift();
+  });
+  updatePanel(state);
+
+  // Platoon info auto-refresh (merged from duplicate handler)
+  _platoonRefreshTimer++;
+  if (_platoonRefreshTimer % 300 === 0) {
+    refreshPlatoonInfo();
+  }
+  // Update queue status from state_update payload
+  if (state.maneuver_queue) {
+    const q = state.maneuver_queue;
+    const qEl = document.getElementById('queueStatusBadge');
+    const aEl = document.getElementById('queueActivePlatoons');
+    if (qEl && aEl) {
+      if (q.queue_busy) {
+        qEl.innerHTML = `<span class="queue-badge queue-busy">⚡ Manuver Aktif: P${q.active_platoons.join(', P')}</span>`;
+        aEl.textContent = `Teorema 4.1: Platoon ${q.active_platoons.map(p=>'P'+p).join(', ')} terkunci`;
+      } else {
+        qEl.innerHTML = '<span class="queue-badge queue-free">✓ Bebas — tidak ada manuver aktif</span>';
+        aEl.textContent = '';
+      }
+    }
+  }
+});
+
+socket.on('collision_detected', d => {
+  dbgW('Collision at t=', d.time);
+  const a=document.getElementById('collisionAlert');
+  a.style.display='block'; a.textContent=`💥 COLLISION — t=${d.time.toFixed(2)}s`;
+  logEvent(`💥 COLLISION t=${d.time.toFixed(2)}s — ${d.collision.cause}`,'#f56565');
+  setTimeout(()=>a.style.display='none',4000);
+});
+
+// ════════════════════════════════════════════════════════════
+// BUTTON HANDLERS
+// ════════════════════════════════════════════════════════════
+document.getElementById('startBtn').addEventListener('click', () => {
+  dbg('START clicked — emitting start_simulation', cfg);
+  socket.emit('start_simulation', {config:cfg});
+});
+document.getElementById('stopBtn').addEventListener('click', () => {
+  dbg('STOP clicked');
+  socket.emit('stop_simulation');
+});
+function disturbance(type) { dbg('Disturbance:',type); socket.emit('inject_disturbance',{type}); }
+
+// (Duplicate functions removed — see Protocol-Compliant v6.0 section below)
+
+// ════════════════════════════════════════════════════════════
+// PLATOON MANAGEMENT — Protocol-Compliant v6.0
+// Ref: §4 Transfer, §5 Promosi, §6 Swap, §7.5 ManeuverQueue
+// ════════════════════════════════════════════════════════════
+function addPlatoon() {
+  const n = parseInt(document.getElementById('newPlatoonVehicles').value) || 3;
+  socket.emit('add_platoon', {n_vehicles: n, config: cfg});
+  logEvent(`Menambahkan platoon baru (${n} kendaraan)...`, '#38b2ac');
+}
+
+// Precondition validators (call socket validate_maneuver)
+function validateSwap() {
+  const pa = document.getElementById('swapPlatoonA').value;
+  const pb = document.getElementById('swapPlatoonB').value;
+  const el = document.getElementById('swapPrecond');
+  const siEl = document.getElementById('swapSpeedInfo');
+  if (!pa || !pb) { el.innerHTML=''; siEl.innerHTML=''; return; }
+  socket.emit('validate_maneuver', {type:'swap', params:{platoon_id_a:parseInt(pa), platoon_id_b:parseInt(pb)}});
+}
+
+function validatePromote() {
+  const pid = document.getElementById('promotePlatoon').value;
+  const el = document.getElementById('promotePrecond');
+  if (!pid) { el.innerHTML=''; return; }
+  socket.emit('validate_maneuver', {type:'promote', params:{platoon_id:parseInt(pid)}});
+}
+
+function validateTransfer() {
+  const vid  = document.getElementById('transferVehicleId').value;
+  const tpid = document.getElementById('transferTargetPlatoon').value;
+  const el   = document.getElementById('transferPrecond');
+  if (!vid || !tpid) { el.innerHTML=''; return; }
+  socket.emit('validate_maneuver', {type:'transfer', params:{vehicle_id:parseInt(vid), target_platoon_id:parseInt(tpid)}});
+}
+
+socket.on('maneuver_validation', d => {
+  const cls = d.valid ? 'precond-ok' : 'precond-err';
+  const icon = d.valid ? '✓' : '✗';
+  const html = `<span class="${cls}">${icon} ${d.reason}</span>`;
+  if (d.type === 'swap') {
+    document.getElementById('swapPrecond').innerHTML = html;
+    if (d.valid && d.vel_a_kmh !== undefined) {
+      const dvC = d.vel_diff_ms < 2 ? '#00ff88' : d.vel_diff_ms < 4 ? '#f6ad55' : '#f56565';
+      document.getElementById('swapSpeedInfo').innerHTML =
+        `S6: vA=<span>${d.vel_a_kmh} km/h</span> vB=<span>${d.vel_b_kmh} km/h</span> Δv=<span style="color:${dvC}">${(d.vel_diff_ms*3.6).toFixed(1)} km/h</span>`;
+    } else {
+      document.getElementById('swapSpeedInfo').innerHTML='';
+    }
+  } else if (d.type === 'promote') {
+    document.getElementById('promotePrecond').innerHTML = html;
+  } else if (d.type === 'transfer') {
+    document.getElementById('transferPrecond').innerHTML = html;
+  }
+});
+
+function transferVehicle() {
+  const vid  = document.getElementById('transferVehicleId').value;
+  const tpid = document.getElementById('transferTargetPlatoon').value;
+  if (!vid || !tpid) { alert('Pilih kendaraan dan platoon tujuan terlebih dahulu!'); return; }
+  socket.emit('transfer_vehicle', {vehicle_id: parseInt(vid), target_platoon_id: parseInt(tpid)});
+  logEvent(`[§4 Transfer] V${vid} → Platoon ${tpid} (C1-C6 validation on server)`, '#9f7aea');
+}
+
+function swapLeaders() {
+  const pa = document.getElementById('swapPlatoonA').value;
+  const pb = document.getElementById('swapPlatoonB').value;
+  if (!pa || !pb) { alert('Pilih dua platoon yang berbeda!'); return; }
+  if (pa === pb)  { alert('Platoon harus berbeda!'); return; }
+  socket.emit('swap_leaders', {platoon_id_a: parseInt(pa), platoon_id_b: parseInt(pb)});
+  logEvent(`[§6 Swap] Leader P${pa} ⇆ P${pb} (S1-S6 validation on server)`, '#00ff88');
+}
+
+function promoteLeader() {
+  const pid = document.getElementById('promotePlatoon').value;
+  if (!pid) { alert('Pilih platoon!'); return; }
+  socket.emit('promote_leader', {platoon_id: parseInt(pid)});
+  logEvent(`[§5 Promote] Leader baru di Platoon ${pid} (Prop 5.1 validation on server)`, '#f6ad55');
+}
+
+function refreshPlatoonInfo() {
+  socket.emit('request_platoon_info');
+}
+
+// Protocol FSM Visualizer
+function renderFSMVisualizer(platoons) {
+  const el = document.getElementById('fsmVisualizer');
+  if (!platoons || !platoons.length) { el.innerHTML='<span style="color:#718096">Tidak ada platoon aktif.</span>'; return; }
+  const states = ['CACC','DEGRADED','ACC','TRANSFER','EMERGENCY'];
+  const stateColors = {CACC:'#38b2ac',DEGRADED:'#f6ad55',ACC:'#9f7aea',TRANSFER:'#00bcd4',EMERGENCY:'#f56565',LEADER:'#00ffff'};
+  let html = '';
+  platoons.forEach(pl => {
+    const byState = {};
+    pl.vehicles.forEach(v => {
+      const s = v.reported_state || v.fsm_state || 'CACC';
+      if (!byState[s]) byState[s] = 0;
+      byState[s]++;
+    });
+    html += `<div style="margin-bottom:8px;padding:6px;background:rgba(0,0,0,.3);border-radius:6px;border-left:2px solid #38b2ac">
+      <div style="font-weight:700;color:#00ff88;margin-bottom:4px;font-size:.72rem">P${pl.platoon_id} — ${pl.vehicles.length} kend. | ${pl.avg_speed_kmh||0} km/h
+        ${pl.in_maneuver?'<span style="color:#f56565;font-size:.6rem"> ⚡ Manuver Aktif</span>':''}
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${Object.entries(byState).map(([s,n])=>`<span style="background:${stateColors[s]||'#718096'}22;color:${stateColors[s]||'#718096'};border:1px solid ${stateColors[s]||'#718096'}44;padding:1px 6px;border-radius:3px;font-size:.62rem">${s}:${n}</span>`).join('')}
+      </div>
+      <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">
+        ${pl.vehicles.map(v=>{
+          const s = v.reported_state||v.fsm_state||'CACC';
+          const cd = v.transfer_cooldown||0;
+          return `<span title="V${v.id} | ${v.velocity_kmh} km/h${cd>0?' | Cooldown:'+cd.toFixed(1)+'s':''}" style="cursor:help;padding:1px 5px;background:rgba(0,0,0,.4);border:1px solid ${stateColors[s]||'#718096'}55;border-radius:3px;color:${stateColors[s]||'#718096'};font-size:.6rem">${v.is_leader?'👑':''}V${v.id}${cd>0?' ⏱'+cd.toFixed(0)+'s':''}</span>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function updateTransferDropdowns(platoons) {
+  const vSel  = document.getElementById('transferVehicleId');
+  const pSel  = document.getElementById('transferTargetPlatoon');
+  const swapA = document.getElementById('swapPlatoonA');
+  const swapB = document.getElementById('swapPlatoonB');
+  const prom  = document.getElementById('promotePlatoon');
+  const prevV = vSel.value, prevP = pSel.value;
+  const prevA = swapA.value, prevB = swapB.value, prevPr = prom.value;
+
+  vSel.innerHTML  = '<option value="">-- Pilih kendaraan --</option>';
+  pSel.innerHTML  = '<option value="">-- Pilih platoon --</option>';
+  swapA.innerHTML = '<option value="">-- Pilih --</option>';
+  swapB.innerHTML = '<option value="">-- Pilih --</option>';
+  prom.innerHTML  = '<option value="">-- Pilih platoon --</option>';
+
+  platoons.forEach(pl => {
+    const spd = pl.avg_speed_kmh || 0;
+    const opt = `<option value="${pl.platoon_id}">P${pl.platoon_id} (${pl.vehicles.length} kend. | ${spd} km/h)</option>`;
+    pSel.innerHTML  += opt;
+    swapA.innerHTML += opt;
+    swapB.innerHTML += opt;
+    prom.innerHTML  += opt;
+    pl.vehicles.forEach(v => {
+      if (!v.is_leader && !v.collided) {
+        const cdStr = v.transfer_cooldown > 0 ? ` [cooldown ${v.transfer_cooldown.toFixed(1)}s]` : '';
+        vSel.innerHTML += `<option value="${v.id}"${v.transfer_cooldown>0?' disabled':''}>V${v.id} (P${pl.platoon_id}) ${v.velocity_kmh}km/h${cdStr}</option>`;
+      }
+    });
+  });
+
+  if (prevV)  vSel.value  = prevV;
+  if (prevP)  pSel.value  = prevP;
+  if (prevA)  swapA.value = prevA;
+  if (prevB)  swapB.value = prevB;
+  if (prevPr) prom.value  = prevPr;
+}
+
+function renderPlatoonStatus(platoons) {
+  const el = document.getElementById('platoonStatusList');
+  if (!platoons || platoons.length === 0) {
+    el.innerHTML = '<div style="color:#718096">Tidak ada platoon aktif.</div>';
+    return;
+  }
+  const stateColors = {CACC:'#38b2ac',DEGRADED:'#f6ad55',ACC:'#9f7aea',TRANSFER:'#00bcd4',EMERGENCY:'#f56565',LEADER:'#00ffff'};
+  el.innerHTML = platoons.map(pl => `
+    <div style="background:rgba(0,0,0,.35);border-radius:7px;padding:8px;margin-bottom:7px;border-left:3px solid ${pl.in_maneuver?'#f56565':'#38b2ac'}">
+      <div style="font-weight:700;color:#00ff88;margin-bottom:4px;font-size:.72rem">
+        Platoon ${pl.platoon_id}
+        <span style="font-size:.65rem;color:#718096;font-weight:400">${pl.vehicles.length} kend. | ${pl.avg_speed_kmh||0} km/h</span>
+        ${pl.in_maneuver ? '<span style="color:#f56565;font-size:.6rem;margin-left:4px">⚡ MANUVER</span>' : ''}
+      </div>
+      ${pl.vehicles.map(v => {
+        const s = v.reported_state||v.fsm_state||'CACC';
+        const cdl = v.transfer_cooldown||0;
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:.68rem">
+          <span style="color:${v.is_leader?'#00ffff':'#a0b4ff'}">${v.is_leader?'👑':'•'} V${v.id}${v.collided?' 💥':''}</span>
+          <span style="color:#718096">${v.velocity_kmh} km/h</span>
+          <span style="color:${stateColors[s]||'#718096'}">${s}${cdl>0?` ⏱${cdl.toFixed(1)}s`:''}</span>
+          <span style="color:#718096;font-size:.6rem">${v.aoi_ms!=null?v.aoi_ms.toFixed(0)+'ms':''}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  `).join('');
+
+  // Update queue status
+  const qEl = document.getElementById('queueStatusBadge');
+  const activeEl = document.getElementById('queueActivePlatoons');
+  const busy = platoons.some(pl => pl.in_maneuver);
+  const activePlatoons = platoons.filter(pl => pl.in_maneuver).map(pl => `P${pl.platoon_id}`);
+  qEl.innerHTML = busy
+    ? `<span class="queue-badge queue-busy">⚡ Manuver Aktif: ${activePlatoons.join(', ')}</span>`
+    : `<span class="queue-badge queue-free">✓ Bebas — tidak ada manuver aktif</span>`;
+  activeEl.textContent = busy ? `Teorema 4.1: Platoon lain tidak bisa manuver bersamaan dengan ${activePlatoons.join(', ')}` : '';
+
+  // Update FSM visualizer
+  renderFSMVisualizer(platoons);
+}
+
+function addTransferLog(msg, color='#a0b4ff') {
+  const log = document.getElementById('transferLog');
+  const e   = document.createElement('div');
+  const ts  = new Date().toLocaleTimeString();
+  e.style.cssText = `padding:2px 0;border-bottom:1px solid rgba(255,255,255,.04);color:${color}`;
+  e.textContent = `[${ts}] ${msg}`;
+  log.prepend(e);
+  while (log.children.length > 30) log.removeChild(log.lastChild);
+}
+
+// Socket listeners untuk platoon management
+socket.on('platoon_added', d => {
+  dbg('Platoon added:', d);
+  logEvent(`Platoon ${d.platoon_id} ditambah — ${d.n_vehicles} kendaraan`, '#38b2ac');
+  addTransferLog(`[NEW-01] Platoon ${d.platoon_id} dibuat, leader V${d.leader_id}`, '#38b2ac');
+  refreshPlatoonInfo();
+});
+
+socket.on('transfer_phase_update', d => {
+  dbg('Transfer phase update:', d);
+  const phaseEmoji = d.phase === 'DEPARTING' ? '↗' : '✈';
+  logEvent(`${phaseEmoji} V${d.vehicle_id} [${d.phase}]: P${d.from_platoon}→P${d.to_platoon}`, '#f6ad55');
+  addTransferLog(`[§4 ${d.phase}] V${d.vehicle_id}: P${d.from_platoon}→P${d.to_platoon}`, '#f6ad55');
+});
+
+socket.on('vehicle_transferred', d => {
+  dbg('Vehicle transferred:', d);
+  if (d.phase === 'DEPARTING') {
+    logEvent(`↗ V${d.vehicle_id} mulai transfer: P${d.from_platoon}→P${d.to_platoon} [DEPARTING...]`, '#f6ad55');
+    addTransferLog(`[§4 DEPARTING] V${d.vehicle_id}: P${d.from_platoon}→P${d.to_platoon}`, '#f6ad55');
+  } else {
+    logEvent(`✅ V${d.vehicle_id}: P${d.from_platoon}→P${d.to_platoon} [COMPLETE] | cooldown 2s aktif`, '#9f7aea');
+    addTransferLog(`[§4 COMPLETE] V${d.vehicle_id}: P${d.from_platoon}→P${d.to_platoon}`, '#9f7aea');
+    refreshPlatoonInfo();
+    document.getElementById('transferPrecond').innerHTML='';
+  }
+});
+
+socket.on('leaders_swapped', d => {
+  dbg('Leaders swapped:', d);
+  logEvent(`[§6] Swap COMPLETE: P${d.platoon_a}(→V${d.new_leader_a}) ⇆ P${d.platoon_b}(→V${d.new_leader_b}) | Δv=${d.vel_diff_ms||'?'}m/s`, '#00ff88');
+  addTransferLog(`[§6 Swap COMPLETE] P${d.platoon_a}⇆P${d.platoon_b} | newA:V${d.new_leader_a} newB:V${d.new_leader_b}`, '#00ff88');
+  refreshPlatoonInfo();
+  document.getElementById('swapPrecond').innerHTML='';
+  document.getElementById('swapSpeedInfo').innerHTML='';
+});
+
+socket.on('leader_promoted', d => {
+  dbg('Leader promoted:', d);
+  logEvent(`[§5] Promosi COMPLETE: P${d.platoon_id} V${d.old_leader_id}→ekor, V${d.new_leader_id}→leader`, '#f6ad55');
+  addTransferLog(`[§5 Promote COMPLETE] P${d.platoon_id}: V${d.old_leader_id}→ekor, V${d.new_leader_id}→leader`, '#f6ad55');
+  refreshPlatoonInfo();
+  document.getElementById('promotePrecond').innerHTML='';
+});
+
+socket.on('emergency_promotion', d => {
+  dbg('Emergency promotion!', d);
+  logEvent(`[§5.5 EMERGENCY] P${d.platoon_id}: V${d.old_leader} diam, V${d.new_leader} ambil alih! AoI=${d.trigger_aoi_ms}ms`, '#ff5722');
+  addTransferLog(`[§5.5 EMRG PROMOTE] P${d.platoon_id}: V${d.new_leader} jadi leader darurat | AoI=${d.trigger_aoi_ms}ms`, '#ff5722');
+  const alert = document.getElementById('emergencyPromoAlert');
+  alert.textContent = `⚡ EMERGENCY PROMOTION! P${d.platoon_id}: V${d.new_leader} jadi leader (AoI=${d.trigger_aoi_ms}ms)`;
+  alert.style.display = 'block';
+  setTimeout(() => alert.style.display = 'none', 5000);
+  refreshPlatoonInfo();
+});
+
+socket.on('leader_error', d => {
+  logEvent('⚠ Leader op gagal: ' + (d.error || JSON.stringify(d)), '#f56565');
+  addTransferLog('✗ Gagal: ' + (d.error || JSON.stringify(d)), '#f56565');
+});
+
+socket.on('platoon_error', d => {
+  logEvent('⚠ Platoon error: ' + d.error, '#f56565');
+  addTransferLog('✗ Error: ' + d.error, '#f56565');
+});
+
+socket.on('transfer_error', d => {
+  logEvent('⚠ Transfer gagal: ' + (d.error || JSON.stringify(d)), '#f56565');
+  addTransferLog('✗ Gagal: ' + (d.error || JSON.stringify(d)), '#f56565');
+});
+
+socket.on('platoon_info', d => {
+  dbg('Platoon info:', d);
+  if (d.platoons) {
+    renderPlatoonStatus(d.platoons);
+    updateTransferDropdowns(d.platoons);
+    renderFSMVisualizer(d.platoons);
+  }
+});
+
+// Auto-refresh platoon info — merged into main state_update handler above
+let _platoonRefreshTimer = 0;
+
+// ════════════════════════════════════════════════════════════
+// INIT — BUG-3 FIX: start render loop ONLY after window.load
+// (canvas dimensions are 0 before DOM is fully painted)
+// ════════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  dbg('window.load — initialising canvas and starting game loop');
+  resizeCanvas(); resizeST();
+  dbg('Canvas after resize:', mc.width+'x'+mc.height);
+
+  Chart.defaults.color='#718096';
+  latencyMiniChart=new Chart(document.getElementById('latencyMiniChart'),{
+    type:'line',
+    data:{labels:[],datasets:[{label:'Latency',data:[],borderColor:'#9f7aea',borderWidth:1.5,
+      backgroundColor:'rgba(159,114,234,.1)',fill:true,tension:0.3,pointRadius:0}]},
+    options:{responsive:true,animation:{duration:0},
+      plugins:{legend:{display:false}},
+      scales:{x:{display:false},y:{min:0,ticks:{color:'#718096',font:{size:9}}}}}
+  });
+
+  requestAnimationFrame(gameLoop);   // ← game loop starts here, not at parse time
+  dbg('Game loop started. Waiting for simulation.');
+
+  // BUG6-FIX: ResizeObserver — canvas mengikuti ukuran container saat window di-resize
+  const canvasArea = document.querySelector('.canvas-area');
+  if (canvasArea && typeof ResizeObserver !== 'undefined') {
+    const stWrap = document.getElementById('stWrap');
+    const resizeObs = new ResizeObserver(() => {
+      const rect = canvasArea.getBoundingClientRect();
+      const stH = showST ? (parseInt(stWrap.style.height) || 130) : 0;
+      const newW = Math.floor(rect.width);
+      const newH = Math.max(200, Math.floor(rect.height) - stH);
+      if (mc.width !== newW || mc.height !== newH) {
+        mc.width  = newW;
+        mc.height = newH;
+      }
+      if (stc.width !== newW) {
+        stc.width  = newW;
+        stc.height = stH;
+      }
+    });
+    resizeObs.observe(canvasArea);
+    dbg('ResizeObserver attached to canvas-area');
+  }
+});
+
+dbg('Script loaded — waiting for window.load');
+</script>
+</body></html>

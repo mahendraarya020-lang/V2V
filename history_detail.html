@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Details</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 100%);
+            color: #2d3748;
+            min-height: 100vh;
+        }
+
+        .nav {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .nav-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .btn-home {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #38b2ac 0%, #2c7a7b 100%);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-home:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(56, 178, 172, 0.4);
+        }
+
+        .btn-back {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #4a5568;
+            font-weight: 700;
+        }
+
+        .experiment-id {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .detail-section {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .detail-section h2 {
+            color: #667eea;
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+            font-weight: 700;
+        }
+
+        .param-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .param-row:last-child {
+            border-bottom: none;
+        }
+
+        .param-label {
+            color: #718096;
+            font-weight: 600;
+        }
+
+        .param-value {
+            color: #2d3748;
+            font-weight: 700;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: rgba(56, 178, 172, 0.2);
+            color: #2c7a7b;
+        }
+
+        .status-danger {
+            background: rgba(245, 101, 101, 0.2);
+            color: #c53030;
+        }
+
+        .summary-section {
+            grid-column: 1 / -1;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-card {
+            background: #f7fafc;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            transition: transform 0.2s;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-3px);
+            border-color: #667eea;
+        }
+
+        .summary-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .label {
+            color: #718096;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <div class="nav-left">
+            <div class="nav-title">V2V 5G PLATOONING RESEARCH PLATFORM</div>
+            <a href="/dashboard" class="btn-home">🏠 Home</a>
+            <a href="/history" class="btn-back">← Back to History</a>
+        </div>
+        <div class="nav-user">
+            <span>{{user}}</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Simulation Details</h1>
+        <div class="experiment-id">Experiment ID: {{ detail.experiment_id }}</div>
+        <div class="experiment-id">Timestamp: {{ detail.timestamp }}</div>
+
+        <div class="details-grid">
+            <!-- Summary Section -->
+            <div class="detail-section summary-section">
+                <h2>📊 Results Summary</h2>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="value">{{ "%.1f"|format(detail.duration_seconds) }}</div>
+                        <div class="label">Duration (s)</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="value">{{ "%.2f"|format(detail.avg_spacing_error) }}</div>
+                        <div class="label">Avg Error (m)</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="value">
+                            {% if detail.collision_occurred %}
+                            <span class="status-badge status-danger">YES</span>
+                            {% else %}
+                            <span class="status-badge status-success">NO</span>
+                            {% endif %}
+                        </div>
+                        <div class="label">Collision</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platoon Parameters -->
+            <div class="detail-section">
+                <h2>🚗 Platoon Parameters</h2>
+                <div class="param-row">
+                    <span class="param-label">Vehicles per Platoon</span>
+                    <span class="param-value">{{ detail.num_vehicles }}</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Number of Platoons</span>
+                    <span class="param-value">{{ detail.num_platoons }}</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Initial Spacing</span>
+                    <span class="param-value">{{ detail.initial_spacing }} m</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Desired Speed</span>
+                    <span class="param-value">{{ detail.desired_speed }} m/s</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Time Headway</span>
+                    <span class="param-value">{{ detail.config.time_headway }} s</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Kp</span>
+                    <span class="param-value">{{ detail.config.kp }}</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Kd</span>
+                    <span class="param-value">{{ detail.config.kd }}</span>
+                </div>
+            </div>
+
+            <!-- Network Parameters -->
+            <div class="detail-section">
+                <h2>📡 5G Network</h2>
+                <div class="param-row">
+                    <span class="param-label">Latency</span>
+                    <span class="param-value">{{ detail.latency_ms }} ms</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Packet Loss</span>
+                    <span class="param-value">{{ detail.packet_loss }} %</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Jitter</span>
+                    <span class="param-value">{{ detail.config.jitter_ms }} ms</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Bandwidth</span>
+                    <span class="param-value">{{ detail.config.bandwidth_mbps }} Mbps</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Network Slicing</span>
+                    <span class="param-value">{{ detail.network_slicing }}</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">RSU Enabled</span>
+                    <span class="param-value">{{ "Yes" if detail.config.rsu_enabled else "No" }}</span>
+                </div>
+            </div>
+
+            <!-- Safety Parameters -->
+            <div class="detail-section">
+                <h2>🛡️ Safety</h2>
+                <div class="param-row">
+                    <span class="param-label">Min Safe Spacing</span>
+                    <span class="param-value">{{ detail.config.min_safe_spacing }} m</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">V2V Timeout</span>
+                    <span class="param-value">{{ detail.config.v2v_timeout }} ms</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Max Acceleration</span>
+                    <span class="param-value">{{ detail.config.max_accel }} m/s²</span>
+                </div>
+                <div class="param-row">
+                    <span class="param-label">Max Deceleration</span>
+                    <span class="param-value">{{ detail.config.max_decel }} m/s²</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
